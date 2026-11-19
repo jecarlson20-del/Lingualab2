@@ -1,0 +1,2953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LexiLens — Linguistic Analysis & Interlinear Studio (Google Sites Edition)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- OpenCC-JS for automatic Simplified <-> Traditional Chinese conversion -->
+  <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.min.js"></script>
+  <!-- Google Fonts: Inter, Noto Sans SC, Noto Sans TC, Noto Naskh Arabic (for Xiao'erjing) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@500;600&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'sans-serif'],
+            arabic: ['Noto Naskh Arabic', 'serif'],
+            cjk: ['Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* Custom Ruby styling for crisp interlinear display */
+    ruby {
+      ruby-align: center;
+      display: inline-flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      vertical-align: bottom;
+      line-height: 1.25;
+      margin: 0 3px;
+    }
+
+    rt {
+      display: block;
+      font-size: 0.72em;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1.3;
+      margin-bottom: 3px;
+      user-select: none;
+    }
+
+    /* Xiao'erjing RTL phonetic script adjustment */
+    .rt-xiaoerjing {
+      font-family: 'Noto Naskh Arabic', serif;
+      font-size: 0.85em;
+      direction: rtl;
+      unicode-bidi: isolate;
+    }
+
+    /* 3D Flashcard Flip Animation */
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+
+    .preserve-3d {
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .rotate-y-180 {
+      transform: rotateY(180deg);
+    }
+
+    .backface-hidden {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    /* Smooth subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- Toast Notification Banner -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3.5 gap-3">
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h1 class="text-lg font-bold tracking-tight text-slate-900">LexiLens</h1>
+              <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/70">Google Sites Edition</span>
+            </div>
+            <p class="text-xs text-slate-500">Interlinear Glossing, Phonetic Scripts, Simp ↔ Trad Converter &amp; Comparative Grammar</p>
+          </div>
+        </div>
+
+        <!-- Main Tab Navigation -->
+        <nav class="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto overflow-x-auto max-w-full" role="tablist">
+          <button id="tab-btn-analyzer" onclick="switchTab('analyzer')" role="tab" aria-selected="true"
+            class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-indigo-700 shadow-sm shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Text Analyzer</span>
+          </button>
+
+          <button id="tab-btn-flashcards" onclick="switchTab('flashcards')" role="tab" aria-selected="false"
+            class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition-all shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <span>Flashcards</span>
+            <span id="flashcard-badge" class="ml-0.5 px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-600 text-white">0</span>
+          </button>
+
+          <button id="tab-btn-comparator" onclick="switchTab('comparator')" role="tab" aria-selected="false"
+            class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition-all shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <span>Language Comparator</span>
+          </button>
+
+          <button id="tab-btn-dictionaries" onclick="switchTab('dictionaries')" role="tab" aria-selected="false"
+            class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition-all shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <span>Dialect Dictionaries</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: TEXT ANALYZER                                                  -->
+    <!-- ===================================================================== -->
+    <section id="panel-analyzer" class="space-y-6">
+      <!-- Gemini API Configuration & Mode Bar -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-5 space-y-3.5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Gemini Structured Linguistic Engine (<code class="text-[11px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">gemini-3-flash-preview</code>)</h3>
+              <p class="text-xs text-slate-500">Generates word-aligned glosses, multi-dialect Chinese phonetics &amp; IPA, and grammar explanations directly in JSON.</p>
+            </div>
+          </div>
+
+          <!-- Mode Switcher: Live Gemini API vs Offline Lexicon / Demo Mode -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/70">
+              <button type="button" id="mode-btn-live" onclick="setTranslationMode('live')"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-indigo-700 shadow-sm">
+                Live Gemini API
+              </button>
+              <button type="button" id="mode-btn-offline" onclick="setTranslationMode('offline')"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900">
+                Offline Lexicon / Demo
+              </button>
+            </div>
+            <span id="api-connection-status" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Live Gemini Ready (Runtime Key / Local Key)
+            </span>
+          </div>
+        </div>
+
+        <!-- Daily Request (RPD) Quota Meter Bar -->
+        <div class="p-3.5 rounded-xl bg-slate-50/90 border border-slate-200/80 space-y-2">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold text-slate-800">Daily Requests Remaining (RPD)</span>
+              <span id="rpd-date-badge" class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-white text-slate-600 border border-slate-200"></span>
+              <span id="rpd-remaining-label" class="text-xs font-bold text-indigo-700"></span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <label for="rpd-limit-input" class="text-slate-500 font-medium">Daily Limit:</label>
+              <input id="rpd-limit-input" type="number" min="1" max="1000000" step="1" onchange="updateRpdLimit()"
+                class="w-24 px-2 py-1 text-xs font-mono font-semibold bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+              <button type="button" onclick="resetDailyRpdUsage()"
+                class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition">
+                Reset Today
+              </button>
+            </div>
+          </div>
+
+          <div class="w-full h-3 rounded-full bg-slate-200/90 overflow-hidden">
+            <div id="rpd-progress-bar" class="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 transition-all duration-300" style="width: 100%;"></div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-500">
+            <span id="rpd-usage-summary"></span>
+            <span>Resets automatically at local midnight (00:00)</span>
+          </div>
+        </div>
+
+        <!-- Optional Override API Key Input Row -->
+        <div id="api-key-controls-row" class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-100 items-center">
+          <div class="md:col-span-6 relative">
+            <input id="gemini-api-key-input" type="password" autocomplete="off"
+              oninput="handleApiKeyInputChange()"
+              placeholder="Optional Gemini API key override (leave blank to use environment key)..."
+              class="w-full pl-3.5 pr-10 py-2 text-xs sm:text-sm font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+            <button type="button" onclick="toggleApiKeyVisibility()" title="Show / Hide API Key"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1">
+              <svg id="eye-icon-svg" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="md:col-span-6 flex flex-wrap items-center gap-2">
+            <button type="button" onclick="saveApiKeyToStorage()"
+              class="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition">
+              Save Key
+            </button>
+            <button type="button" onclick="testGeminiConnection()"
+              class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-white hover:bg-slate-700 transition">
+              Test Gemini
+            </button>
+            <button type="button" onclick="clearApiKeyFromStorage()"
+              class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition">
+              Clear Key
+            </button>
+            <span id="last-api-call-info" class="text-[11px] text-slate-500 ml-auto"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input & Controls Card -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Source Passage Input</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Paste any passage directly below or load a curated multi-dialect sample sentence.</p>
+          </div>
+
+          <!-- Preset Sample Loader Buttons -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">Samples:</span>
+            <button onclick="loadAnalyzerPreset('zh_culture')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/70 transition">
+              🇨🇳 Chinese (Silk Road)
+            </button>
+            <button onclick="loadAnalyzerPreset('zh_daily')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70 transition">
+              🫖 Chinese (Tea &amp; Rain)
+            </button>
+            <button onclick="loadAnalyzerPreset('zh_dialect_greetings')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200/70 transition">
+              🗣️ Sinitic Core Lexicon
+            </button>
+            <button onclick="loadAnalyzerPreset('cs_prague')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/70 transition">
+              🇨🇿 Czech (Prague Morning)
+            </button>
+            <button onclick="loadAnalyzerPreset('ja_kyoto')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/70 transition">
+              🇯🇵 Japanese (Kyoto Autumn)
+            </button>
+          </div>
+        </div>
+
+        <!-- Textarea + Controls -->
+        <div class="space-y-3">
+          <textarea id="source-text-input" rows="3"
+            placeholder="Paste any Chinese (Mandarin, Cantonese, Hokkien, Wu, Teochew, Fuzhou, Taishanese, Jin), Czech, or Japanese text here..."
+            class="w-full p-4 text-base sm:text-lg font-cjk bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition resize-y"></textarea>
+
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
+            <!-- Language & Chinese Dialect / Phonetic Script Selector -->
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/80">
+                <label for="language-select" class="text-xs font-semibold text-slate-600">Language:</label>
+                <select id="language-select" onchange="handleLanguageChange()" class="text-xs sm:text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer">
+                  <option value="auto">Auto-Detect</option>
+                  <option value="zh">Chinese (Sinitic Varieties)</option>
+                  <option value="cs">Czech (Čeština)</option>
+                  <option value="ja">Japanese (日本語)</option>
+                </select>
+              </div>
+
+              <!-- Comprehensive Chinese Dialect & Phonetic System Dropdown -->
+              <div id="phonetic-selector-wrapper" class="flex items-center gap-2 bg-indigo-50/90 px-3 py-1.5 rounded-xl border border-indigo-200 transition-all max-w-full">
+                <label for="phonetic-system" class="text-xs font-semibold text-indigo-800 flex items-center gap-1.5 shrink-0">
+                  <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10" />
+                  </svg>
+                  <span>Dialect &amp; Phonetics:</span>
+                </label>
+                <select id="phonetic-system" onchange="renderAnalysis()" class="text-xs sm:text-sm font-bold text-indigo-950 bg-transparent focus:outline-none cursor-pointer truncate max-w-[230px] sm:max-w-xs">
+                  <optgroup label="Mandarin Standard (官話 / 國語)">
+                    <option value="pinyin">Mandarin — Pinyin (Hànyǔ Pīnyīn)</option>
+                    <option value="bopomofo">Mandarin — Bopomofo / Zhuyin (ㄅㄆㄇㄈ)</option>
+                    <option value="wadegiles">Mandarin — Wade-Giles (威妥瑪拼音)</option>
+                    <option value="xiaoerjing">Mandarin — Xiao'erjing (شِيَوْ عَر دٍ)</option>
+                    <option value="mandarin_ipa">Mandarin — IPA [pʰɪn˥.in˥]</option>
+                  </optgroup>
+                  <optgroup label="Cantonese / Yue (粵語 · CC-Canto)">
+                    <option value="jyutping">Cantonese — Jyutping (粵拼)</option>
+                    <option value="cantonese_yale">Cantonese — Yale Romanization</option>
+                    <option value="cantonese_ipa">Cantonese — IPA [jyːt˨.pʰɪŋ˧]</option>
+                  </optgroup>
+                  <optgroup label="Taishanese / Hoisan-wa (台山話 · TaishanDict)">
+                    <option value="taishanese_rom">Taishanese — Gene Chin / Stephens Rom.</option>
+                    <option value="taishanese_ipa">Taishanese — IPA [hɔi˧.san˧.va˧˨]</option>
+                  </optgroup>
+                  <optgroup label="Taiwanese Hokkien (臺語 · ChhoeTaigi / FHL)">
+                    <option value="tailo">Taiwanese — Tâi-lô (臺羅拼音)</option>
+                    <option value="poj">Taiwanese — Pe̍h-ōe-jī (白話字)</option>
+                    <option value="hokkien_ipa">Taiwanese Hokkien — IPA [tai˨˦.lo˨˦]</option>
+                  </optgroup>
+                  <optgroup label="Amoy Hokkien (廈門話 · English-Amoy Dict)">
+                    <option value="amoy_poj">Amoy — Pe̍h-ōe-jī (Amoy POJ)</option>
+                    <option value="amoy_ipa">Amoy Hokkien — IPA [e˨˩.mŋ̍˨˦]</option>
+                  </optgroup>
+                  <optgroup label="Teochew / Chaoshan (潮州話 · Mogher)">
+                    <option value="teochew_pengim">Teochew — Peng'im (潮州拼音)</option>
+                    <option value="teochew_ipa">Teochew — IPA [ti̯o˥.t͡siu˧]</option>
+                  </optgroup>
+                  <optgroup label="Eastern Min / Fuzhou (福州話 · SeeDict)">
+                    <option value="fuzhou_buc">Fuzhou — Bàng-uâ-cê (平話字 BUC)</option>
+                    <option value="fuzhou_ipa">Fuzhou — IPA [huʔ˨˩.t͡siu˥]</option>
+                  </optgroup>
+                  <optgroup label="Wu / Shanghainese &amp; Suzhounese (吳語 · Wugniu)">
+                    <option value="wugniu">Wu (Shanghainese) — Wugniu (吳語學堂)</option>
+                    <option value="wu_ipa">Wu (Shanghainese) — IPA [ɦu˨˧.ɲy˦˦]</option>
+                  </optgroup>
+                  <optgroup label="Jin Chinese (晉語 · Academia Sinica Jinyu)">
+                    <option value="jinyu_rom">Jin (Taiyuan) — Xiaoxuetang Rom.</option>
+                    <option value="jinyu_ipa">Jin (Taiyuan) — IPA [tɕiŋ˥˧.y˥˧]</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            <!-- Analyze Action Button -->
+            <button id="analyze-action-btn" onclick="analyzeCurrentText()" class="px-6 py-2.5 text-sm font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/20 active:scale-[0.99] transition flex items-center justify-center gap-2 shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span id="analyze-btn-label">Analyze &amp; Gloss Text</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis Output Grid: Interlinear Display + Word Inspector Sidebar -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left 8 Cols: 3-Layer Color-Coded Interlinear Display & Grammar Breakdown -->
+        <div class="lg:col-span-8 space-y-6">
+          <!-- Interlinear Card -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                <h3 class="text-sm font-bold text-slate-800">Color-Coded Interlinear Alignment</h3>
+              </div>
+              <span class="text-xs text-slate-500">Click any word token to compare dialects, inspect IPA, or save to Flashcards</span>
+            </div>
+
+            <div class="p-5 sm:p-7 space-y-7">
+              <!-- LAYER 1: Original Text with Ruby Phonetics -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Layer 1 · Source Text &amp; Ruby Phonetics (<span id="active-script-label" class="text-indigo-600">Mandarin — Pinyin</span>)</span>
+                </div>
+                <div id="layer-ruby-container" class="p-4 sm:p-5 rounded-xl bg-slate-50/70 border border-slate-200/70 text-2xl sm:text-3xl font-cjk leading-loose flex flex-wrap items-end gap-y-4">
+                  <!-- Ruby tokens injected dynamically -->
+                </div>
+              </div>
+
+              <!-- LAYER 2: Natural English Translation (Color-Matched) -->
+              <div class="space-y-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Layer 2 · Natural English Translation (Color-Matched)</span>
+                <div id="layer-natural-container" class="p-4 rounded-xl bg-white border border-slate-200/80 text-base sm:text-lg leading-relaxed flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
+                  <!-- Color-matched natural translation spans injected dynamically -->
+                </div>
+              </div>
+
+              <!-- LAYER 3: Word-by-Word Literal Syntactic Gloss -->
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-1">
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Layer 3 · Literal Word-by-Word Syntactic Gloss (Source Word Order)</span>
+                  <span class="text-[11px] text-slate-400">Shows exact grammatical structure</span>
+                </div>
+                <div id="layer-literal-container" class="p-4 rounded-xl bg-slate-50/60 border border-slate-200/70 flex flex-wrap gap-2">
+                  <!-- Literal word-by-word gloss blocks injected dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- New Section: Simplified ↔ Traditional Chinese Auto-Translator -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                  ⇄
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">Simplified ↔ Traditional Chinese Auto-Translator</h3>
+                  <p class="text-xs text-slate-500">Automatically converts between Simplified (简体) and Traditional (繁體) as you type or paste</p>
+                </div>
+              </div>
+
+              <!-- Auto-Translate Direction Selector -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/70">
+                  <button type="button" id="simp-trad-dir-s2t" onclick="setSimpTradDirection('s2t')"
+                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-emerald-700 shadow-sm">
+                    简体 → 繁體
+                  </button>
+                  <button type="button" id="simp-trad-dir-t2s" onclick="setSimpTradDirection('t2s')"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900">
+                    繁體 → 简体
+                  </button>
+                </div>
+                <span id="simp-trad-engine-badge" class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Auto Engine Ready
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label id="simp-trad-input-label" for="simp-trad-input" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Simplified Input (简体中文)
+                  </label>
+                  <button type="button" onclick="syncAnalyzerTextIntoConverter()"
+                    class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                    Import from Analyzer ↑
+                  </button>
+                </div>
+                <textarea id="simp-trad-input" rows="4" oninput="runAutoSimpTradTranslation()"
+                  placeholder="Type or paste Chinese text to auto-translate between Simplified and Traditional..."
+                  class="w-full p-3.5 text-base font-cjk bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition resize-y"></textarea>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label id="simp-trad-output-label" for="simp-trad-output" class="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                    Traditional Output (繁體中文)
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <button type="button" onclick="swapSimpTradTexts()"
+                      class="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+                      Swap ⇄
+                    </button>
+                    <button type="button" onclick="copySimpTradOutput()"
+                      class="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition">
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <textarea id="simp-trad-output" rows="4" readonly
+                  placeholder="Auto-translated output appears here automatically..."
+                  class="w-full p-3.5 text-base font-cjk bg-emerald-50/30 border border-emerald-200/80 rounded-xl text-slate-900 focus:outline-none resize-y"></textarea>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <span id="simp-trad-diff-summary" class="text-xs text-slate-500">0 character variants converted</span>
+              <button type="button" onclick="sendConvertedToAnalyzer()"
+                class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition">
+                Send Converted Text to Interlinear Analyzer →
+              </button>
+            </div>
+          </div>
+
+          <!-- Grammar & Sentence Structure Explanation Card -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-4">
+            <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
+              <div class="w-8 h-8 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Grammar &amp; Sentence Structure Breakdown</h3>
+                <p class="text-xs text-slate-500">Detailed syntactic patterns, particles, and contextual usage notes</p>
+              </div>
+            </div>
+
+            <div id="grammar-explanation-container" class="space-y-3.5 text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+              <!-- Grammar paragraphs injected dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 4 Cols: Selected Word Inspector, Cross-Dialect Matrix & Flashcard Creator -->
+        <aside class="lg:col-span-4 sticky top-24">
+          <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+                <h3 class="text-sm font-bold">Word &amp; Dialect Inspector</h3>
+              </div>
+              <span id="inspector-pos-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-white/15 text-indigo-200">Select a word</span>
+            </div>
+
+            <div id="word-inspector-body" class="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
+              <!-- Populated when a word is clicked -->
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: FLASHCARDS STUDY DECK                                          -->
+    <!-- ===================================================================== -->
+    <section id="panel-flashcards" class="hidden space-y-6">
+      <!-- Top Controls & Stats -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Vocabulary Flashcard Deck</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Click the card to flip between the target word and its phonetic reading, gloss, and context.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
+            <span>Mastered:</span>
+            <span id="mastered-count" class="font-bold">0</span> / <span id="total-cards-count" class="font-bold">0</span>
+          </div>
+
+          <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-2 rounded-xl cursor-pointer select-none">
+            <input id="toggle-front-phonetic" type="checkbox" checked onchange="renderFlashcardStage()" class="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span>Show Phonetics on Front</span>
+          </label>
+
+          <button onclick="shuffleFlashcards()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>Shuffle</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive 3D Flashcard Stage -->
+      <div id="flashcard-stage-wrapper" class="max-w-2xl mx-auto space-y-5">
+        <div class="perspective-1000 w-full h-80 sm:h-96 cursor-pointer" onclick="flipFlashcard()">
+          <div id="flashcard-inner" class="preserve-3d relative w-full h-full">
+            <!-- FRONT OF CARD -->
+            <div class="backface-hidden absolute inset-0 bg-white rounded-3xl border-2 border-slate-200/90 shadow-lg p-6 sm:p-10 flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span id="fc-front-lang" class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">Mandarin</span>
+                <span id="fc-card-index" class="text-xs font-semibold text-slate-400">Card 1 of 4</span>
+              </div>
+
+              <div class="text-center my-auto space-y-3">
+                <div id="fc-front-phonetic" class="text-lg sm:text-xl font-semibold text-indigo-600">sīchóu zhī lù</div>
+                <div id="fc-front-word" class="text-4xl sm:text-6xl font-bold font-cjk text-slate-900 tracking-tight">丝绸之路</div>
+              </div>
+
+              <div class="flex items-center justify-center gap-2 text-xs font-medium text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Click card to reveal meaning &amp; grammatical context</span>
+              </div>
+            </div>
+
+            <!-- BACK OF CARD -->
+            <div class="backface-hidden rotate-y-180 absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl border border-indigo-500/30 shadow-xl p-6 sm:p-9 flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span id="fc-back-pos" class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/10 text-indigo-300">Noun Phrase</span>
+                <span id="fc-back-mastered-badge" class="hidden text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">✓ Mastered</span>
+              </div>
+
+              <div class="space-y-4 my-auto">
+                <div>
+                  <div id="fc-back-phonetic-all" class="text-sm text-indigo-300 font-medium">sīchóu zhī lù · ㄙ ㄔㄡˊ ㄓ ㄌㄨˋ</div>
+                  <h3 id="fc-back-meaning" class="text-2xl sm:text-3xl font-bold text-white mt-1">the Silk Road</h3>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+                  <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Literal Gloss &amp; Structure</div>
+                  <p id="fc-back-literal" class="text-sm text-indigo-200 font-medium">silk [of/possessive] road</p>
+                </div>
+
+                <div class="text-xs sm:text-sm text-slate-300">
+                  <span class="text-slate-400 font-semibold">Source Context: </span>
+                  <span id="fc-back-context" class="font-cjk">古代丝绸之路连接了东方与西方。</span>
+                </div>
+              </div>
+
+              <div class="text-center text-xs text-slate-400">Click card to flip back</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation & Mastery Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm">
+          <button onclick="prevFlashcard()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Previous</span>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-toggle-mastered" onclick="toggleMasteredCurrentCard()" class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Mark Mastered</span>
+            </button>
+
+            <button onclick="deleteCurrentFlashcard()" class="p-2.5 rounded-xl text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition" title="Delete Card">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+
+          <button onclick="nextFlashcard()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition flex items-center gap-1.5">
+            <span>Next</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- All Saved Cards Grid List -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-base font-bold text-slate-900">Saved Deck Inventory</h3>
+          <button onclick="resetDefaultFlashcards()" class="text-xs font-semibold text-slate-500 hover:text-indigo-600 transition">Restore Starter Cards</button>
+        </div>
+        <div id="flashcards-grid-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Saved cards list rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: LANGUAGE COMPARATOR                                            -->
+    <!-- ===================================================================== -->
+    <section id="panel-comparator" class="hidden space-y-6">
+      <!-- Comparator Controls & Presets -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Comparative Linguistics &amp; Parallel Text Analyzer</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Compare two closely related languages or dialects side-by-side to inspect cognates, phonological shifts, and syntax.</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">Presets:</span>
+            <button onclick="loadComparatorPreset('cs_sk')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/70 transition">
+              🇨🇿 Czech vs. 🇸🇰 Slovak
+            </button>
+            <button onclick="loadComparatorPreset('es_pt')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/70 transition">
+              🇪🇸 Spanish vs. 🇵🇹 Portuguese
+            </button>
+            <button onclick="loadComparatorPreset('zh_simp_trad')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70 transition">
+              🇨🇳 Simplified vs. 🇹🇼 Traditional
+            </button>
+          </div>
+        </div>
+
+        <!-- Two Side-by-Side Text Inputs -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label for="comp-lang-a-name" class="text-xs font-bold uppercase tracking-wider text-indigo-700">Language A</label>
+              <input id="comp-lang-a-name" type="text" value="Czech (Čeština)" class="text-xs font-semibold text-right bg-indigo-50/70 text-indigo-900 px-2.5 py-1 rounded-lg border border-indigo-200/70 focus:outline-none" />
+            </div>
+            <textarea id="comp-text-a" rows="4" class="w-full p-3.5 text-sm sm:text-base font-cjk bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label for="comp-lang-b-name" class="text-xs font-bold uppercase tracking-wider text-violet-700">Language B</label>
+              <input id="comp-lang-b-name" type="text" value="Slovak (Slovenčina)" class="text-xs font-semibold text-right bg-violet-50/70 text-violet-900 px-2.5 py-1 rounded-lg border border-violet-200/70 focus:outline-none" />
+            </div>
+            <textarea id="comp-text-b" rows="4" class="w-full p-3.5 text-sm sm:text-base font-cjk bg-slate-50/80 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition"></textarea>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button id="comparator-analyze-btn" onclick="runLanguageComparison()" class="px-6 py-2.5 text-sm font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/20 transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <span id="comparator-btn-label">Compare Texts &amp; Analyze Differences</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Visual Diff & Alignment Card -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Token-by-Token Divergence &amp; Cognate Highlighting</h3>
+            <p class="text-xs text-slate-500">Visualizing identical forms, systematic sound/orthographic shifts, and distinct lexical items</p>
+          </div>
+          <!-- Legend -->
+          <div class="flex flex-wrap items-center gap-3 text-xs font-medium">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-100 border border-slate-300"></span> Identical</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-300"></span> Phonetic/Orthographic Shift</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-100 border border-rose-300"></span> Lexical / False Friend</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2">
+            <div id="comp-display-label-a" class="text-xs font-bold uppercase tracking-wider text-indigo-700">Czech (Čeština)</div>
+            <div id="comp-highlighted-a" class="text-base sm:text-lg font-cjk leading-relaxed flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2">
+            <div id="comp-display-label-b" class="text-xs font-bold uppercase tracking-wider text-violet-700">Slovak (Slovenčina)</div>
+            <div id="comp-highlighted-b" class="text-base sm:text-lg font-cjk leading-relaxed flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Linguistic Comparison Explanation -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-4">
+        <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Comparative Grammar, Phonology &amp; Vocabulary Analysis</h3>
+            <p class="text-xs text-slate-500">Explanatory breakdown of structural and historical divergences between the passages</p>
+          </div>
+        </div>
+
+        <div id="comp-explanation-container" class="space-y-4 text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+          <!-- Comparative paragraphs injected dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: CHINESE DIALECT DICTIONARIES HUB                               -->
+    <!-- ===================================================================== -->
+    <section id="panel-dictionaries" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Open-Access Chinese Dialect Dictionaries &amp; Romanization References</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Direct lookup portals across Taiwanese Hokkien, Amoy, Cantonese, Taishanese, Wu/Shanghainese, Teochew, Fuzhou Eastern Min, and Jin Chinese.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="dict-quick-query" type="text" placeholder="Enter character/word to search..." value="丝绸"
+              class="px-3.5 py-2 text-sm font-cjk bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 w-48 sm:w-56" />
+            <button onclick="renderDictionaryHub()" class="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition">
+              Update Links
+            </button>
+          </div>
+        </div>
+
+        <div id="dictionary-hub-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Dictionary cards rendered dynamically -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200/80 py-5 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <span>LexiLens Linguistic Analysis Studio · Multi-Dialect Sinitic Phonetics, IPA, Simp ↔ Trad &amp; Interlinear Grammar</span>
+      <span>Mandarin · Cantonese · Taishanese · Taiwanese/Amoy Hokkien · Teochew · Fuzhou · Wu · Jin</span>
+    </div>
+  </footer>
+
+  <!-- ======================================================================= -->
+  <!-- JAVASCRIPT APPLICATION LOGIC                                            -->
+  <!-- ======================================================================= -->
+  <script>
+    // -------------------------------------------------------------------------
+    // 1. STATE MANAGEMENT & GEMINI API CLIENT
+    // -------------------------------------------------------------------------
+    const GEMINI_MODEL = 'gemini-3-flash-preview';
+    const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+    // Color palette for visual alignment across Source Text, Natural Translation & Literal Gloss
+    const TOKEN_PALETTE = [
+      { bg: '#eef2ff', border: '#c7d2fe', text: '#3730a3', badgeBg: '#e0e7ff' },
+      { bg: '#ecfdf5', border: '#a7f3d0', text: '#065f46', badgeBg: '#d1fae5' },
+      { bg: '#fffbeb', border: '#fde68a', text: '#92400e', badgeBg: '#fef3c7' },
+      { bg: '#fdf2f8', border: '#fbcfe8', text: '#9d174d', badgeBg: '#fce7f3' },
+      { bg: '#f0f9ff', border: '#bae6fd', text: '#075985', badgeBg: '#e0f2fe' },
+      { bg: '#f5f3ff', border: '#ddd6fe', text: '#5b21b6', badgeBg: '#ede9fe' },
+      { bg: '#fff7ed', border: '#fed7aa', text: '#9a3412', badgeBg: '#ffedd5' },
+      { bg: '#f0fdfa', border: '#99f6e4', text: '#115e59', badgeBg: '#ccfbf1' },
+      { bg: '#fef2f2', border: '#fecaca', text: '#991b1b', badgeBg: '#fee2e2' },
+      { bg: '#f7fee7', border: '#d9f99d', text: '#3f6212', badgeBg: '#ecfccb' }
+    ];
+
+    // Core character table across Mandarin, Cantonese, Taishanese, Hokkien/Amoy, Teochew, Fuzhou, Wu & Jin
+    const CHAR_DICT = {
+      '古': { py: 'gǔ', bpmf: 'ㄍㄨˇ', wg: 'ku³', xej: 'قُ', m_ipa: 'ku˨˩˦', jyut: 'gu2', yale: 'gú', c_ipa: 'kuː˧˥', ts: 'gu2', ts_ipa: 'ku˥˥', tl: 'kóo', poj: 'kó͘', hk_ipa: 'kɔ˥˧', amoy: 'kó͘', am_ipa: 'kɔ˥˧', tc: 'gou2', tc_ipa: 'kou̯˥˨', fz: 'gū', fz_ipa: 'ku˥˥', wu: 'ku5', wu_ipa: 'kɯ˧˦', jin: 'ku2', jin_ipa: 'ku˥˧', en: 'ancient', pos: 'Adjective' },
+      '代': { py: 'dài', bpmf: 'ㄉㄞˋ', wg: 'tai⁴', xej: 'دَىْ', m_ipa: 'taɪ̯˥˩', jyut: 'doi6', yale: 'doih', c_ipa: 'tɔːi̯˨', ts: 'doi5', ts_ipa: 'tɔi̯˧˨', tl: 'tāi', poj: 'tāi', hk_ipa: 'tai˨˨', amoy: 'tāi', am_ipa: 'tai˨˨', tc: 'dai7', tc_ipa: 'tai̯˩˩', fz: 'dâi', fz_ipa: 'tai̯˨˦˨', wu: 'de6', wu_ipa: 'de˨˧', jin: 'tæ3', jin_ipa: 'tæ˦˥', en: 'era / dynasty', pos: 'Noun' },
+      '丝': { py: 'sī', bpmf: 'ㄙ', wg: 'ssŭ¹', xej: 'سِ', m_ipa: 'sz̩˥', jyut: 'si1', yale: 'sī', c_ipa: 'siː˥', ts: 'lhu1', ts_ipa: 'ɬu˧˧', tl: 'si', poj: 'si', hk_ipa: 'ɕi˦˦', amoy: 'si', am_ipa: 'si˦˦', tc: 'si1', tc_ipa: 'si˧˧', fz: 'sĭ', fz_ipa: 'si˥˥', wu: 'sy1', wu_ipa: 'sz̩˥˧', jin: 'sz̩1', jin_ipa: 'sz̩˩˩', en: 'silk', pos: 'Noun' },
+      '绸': { py: 'chóu', bpmf: 'ㄔㄡˊ', wg: 'chʻou²', xej: 'چِوْ', m_ipa: 'ʈʂʰoʊ̯˧˥', jyut: 'cau4', yale: 'chàuh', c_ipa: 't͡sʰɐu̯˨˩', ts: 'ciu3', ts_ipa: 't͡sʰiu˨˨', tl: 'tiû', poj: 'tiû', hk_ipa: 'tiu̯˨˦', amoy: 'tiû', am_ipa: 'tiu̯˨˦', tc: 'tiu5', tc_ipa: 'tʰiu̯˥˥', fz: 'diù', fz_ipa: 'tiu̯˥˧', wu: 'zeu6', wu_ipa: 'zɤ˨˧', jin: 'tʂʰəu1', jin_ipa: 'tʂʰəu̯˩˩', en: 'silk fabric', pos: 'Noun' },
+      '之': { py: 'zhī', bpmf: 'ㄓ', wg: 'chih¹', xej: 'جِ', m_ipa: 'ʈʂʐ̩˥', jyut: 'zi1', yale: 'jī', c_ipa: 't͡siː˥', ts: 'zi1', ts_ipa: 't͡si˧˧', tl: 'tsi', poj: 'chi', hk_ipa: 't͡ɕi˦˦', amoy: 'chi', am_ipa: 't͡ɕi˦˦', tc: 'ze1', tc_ipa: 't͡sɯ˧˧', fz: 'cĭ', fz_ipa: 't͡si˥˥', wu: 'tsy1', wu_ipa: 'tsz̩˥˧', jin: 'tʂʐ̩1', jin_ipa: 'tʂʐ̩˩˩', en: 'of [literary]', pos: 'Particle' },
+      '路': { py: 'lù', bpmf: 'ㄌㄨˋ', wg: 'lu⁴', xej: 'لُ', m_ipa: 'lu˥˩', jyut: 'lou6', yale: 'louh', c_ipa: 'lou̯˨', ts: 'lu5', ts_ipa: 'lu˧˨', tl: 'lōo', poj: 'lō͘', hk_ipa: 'lɔ˨˨', amoy: 'lō͘', am_ipa: 'lɔ˨˨', tc: 'lou7', tc_ipa: 'lou̯˩˩', fz: 'diô', fz_ipa: 'tiɔ˨˦˨', wu: 'lu6', wu_ipa: 'lu˨˧', jin: 'lu3', jin_ipa: 'lu˦˥', en: 'road / path', pos: 'Noun' },
+      '连': { py: 'lián', bpmf: 'ㄌㄧㄢˊ', wg: 'lien²', xej: 'لِيًا', m_ipa: 'li̯ɛn˧˥', jyut: 'lin4', yale: 'lìhn', c_ipa: 'liːn˨˩', ts: 'len3', ts_ipa: 'len˨˨', tl: 'liân', poj: 'liân', hk_ipa: 'lian˨˦', amoy: 'liân', am_ipa: 'lian˨˦', tc: 'liang5', tc_ipa: 'liaŋ˥˥', fz: 'lièng', fz_ipa: 'lieŋ˥˧', wu: 'li6', wu_ipa: 'li˨˧', jin: 'liɛ1', jin_ipa: 'liɛ˩˩', en: 'connect', pos: 'Verb' },
+      '接': { py: 'jiē', bpmf: 'ㄐㄧㄝ', wg: 'chieh¹', xej: 'چِيَ', m_ipa: 't͡ɕi̯ɛ˥', jyut: 'zip3', yale: 'jip', c_ipa: 't͡siːp̚˧', ts: 'zip4', ts_ipa: 't͡sip̚˨˩', tl: 'tsiap', poj: 'chiap', hk_ipa: 't͡ɕiap̚˧˨', amoy: 'chiap', am_ipa: 't͡ɕiap̚˧˨', tc: 'ziab4', tc_ipa: 't͡siap̚˨', fz: 'ciĕk', fz_ipa: 't͡siek̚˨˦', wu: 'tsiq5', wu_ipa: 't͡ɕiɪʔ˥', jin: 't͡ɕiɛʔ4', jin_ipa: 't͡ɕiɛʔ˨', en: 'join / receive', pos: 'Verb' },
+      '了': { py: 'le', bpmf: '˙ㄌㄜ', wg: 'lo⁵', xej: 'لَ', m_ipa: 'lə', jyut: 'zo2', yale: 'jó', c_ipa: 't͡sɔː˧˥', ts: 'liau2', ts_ipa: 'liau̯˥˥', tl: 'liáu', poj: 'liáu', hk_ipa: 'liau̯˥˧', amoy: 'liáu', am_ipa: 'liau̯˥˧', tc: 'lao2', tc_ipa: 'lau̯˥˨', fz: 'liēu', fz_ipa: 'lieu̯˥˥', wu: 'leq5', wu_ipa: 'ləʔ˥', jin: 'lɤʔ4', jin_ipa: 'lɤʔ˨', en: '[PFV]', pos: 'Aspect Particle' },
+      '东': { py: 'dōng', bpmf: 'ㄉㄨㄥ', wg: 'tung¹', xej: 'دْوْ', m_ipa: 'tʊŋ˥', jyut: 'dung1', yale: 'dūng', c_ipa: 'tʊŋ˥', ts: 'dung1', ts_ipa: 'tuŋ˧˧', tl: 'tang', poj: 'tang', hk_ipa: 'taŋ˦˦', amoy: 'tang', am_ipa: 'taŋ˦˦', tc: 'dang1', tc_ipa: 'taŋ˧˧', fz: 'dŭng', fz_ipa: 'tuŋ˥˥', wu: 'ton1', wu_ipa: 'toŋ˥˧', jin: 'tʊŋ1', jin_ipa: 'tʊŋ˩˩', en: 'east', pos: 'Noun' },
+      '方': { py: 'fāng', bpmf: 'ㄈㄤ', wg: 'fang¹', xej: 'فَانْ', m_ipa: 'fɑŋ˥', jyut: 'fong1', yale: 'fōng', c_ipa: 'fɔːŋ˥', ts: 'fuang1', ts_ipa: 'fuŋ˧˧', tl: 'hong', poj: 'hong', hk_ipa: 'hɔŋ˦˦', amoy: 'hong', am_ipa: 'hɔŋ˦˦', tc: 'huang1', tc_ipa: 'huaŋ˧˧', fz: 'huŏng', fz_ipa: 'huɔŋ˥˥', wu: 'faon1', wu_ipa: 'fɑ̃˥˧', jin: 'fɑŋ1', jin_ipa: 'fɑŋ˩˩', en: 'direction / side', pos: 'Noun' },
+      '与': { py: 'yǔ', bpmf: 'ㄩˇ', wg: 'yü³', xej: 'يُو', m_ipa: 'y˨˩˦', jyut: 'jyu5', yale: 'yúh', c_ipa: 'jyː˩˧', ts: 'yu2', ts_ipa: 'y˥˥', tl: 'ú', poj: 'ú', hk_ipa: 'u˥˧', amoy: 'ú', am_ipa: 'u˥˧', tc: 'eu2', tc_ipa: 'ɯu̯˥˨', fz: 'ṳ̄', fz_ipa: 'y˥˥', wu: 'ɦy6', wu_ipa: 'ɦy˨˧', jin: 'y2', jin_ipa: 'y˥˧', en: 'and / with', pos: 'Conjunction' },
+      '西': { py: 'xī', bpmf: 'ㄒㄧ', wg: 'hsi¹', xej: 'سِ', m_ipa: 'ɕi˥', jyut: 'sai1', yale: 'sāi', c_ipa: 'sɐi̯˥', ts: 'sii1', ts_ipa: 'si˧˧', tl: 'se', poj: 'se', hk_ipa: 'se˦˦', amoy: 'se', am_ipa: 'se˦˦', tc: 'sai1', tc_ipa: 'sai̯˧˧', fz: 'să', fz_ipa: 'sa˥˥', wu: 'si1', wu_ipa: 'ɕi˥˧', jin: 'ɕi1', jin_ipa: 'ɕi˩˩', en: 'west', pos: 'Noun' },
+      '文': { py: 'wén', bpmf: 'ㄨㄣˊ', wg: 'wên²', xej: 'وٍ', m_ipa: 'wən˧˥', jyut: 'man4', yale: 'màhn', c_ipa: 'mɐn˨˩', ts: 'mun3', ts_ipa: 'mun˨˨', tl: 'bûn', poj: 'bûn', hk_ipa: 'bun˨˦', amoy: 'bûn', am_ipa: 'bun˨˦', tc: 'bhung5', tc_ipa: 'buŋ˥˥', fz: 'ùng', fz_ipa: 'uŋ˥˧', wu: 'ven6', wu_ipa: 'vən˨˧', jin: 'uəŋ1', jin_ipa: 'uəŋ˩˩', en: 'script / culture', pos: 'Noun' },
+      '明': { py: 'míng', bpmf: 'ㄇㄧㄥˊ', wg: 'ming²', xej: 'مٍ', m_ipa: 'miŋ˧˥', jyut: 'ming4', yale: 'mìhng', c_ipa: 'mɪŋ˨˩', ts: 'miang3', ts_ipa: 'miaŋ˨˨', tl: 'bîng', poj: 'bêng', hk_ipa: 'biŋ˨˦', amoy: 'bêng', am_ipa: 'beŋ˨˦', tc: 'bhéng5', tc_ipa: 'beŋ˥˥', fz: 'mìng', fz_ipa: 'miŋ˥˧', wu: 'min6', wu_ipa: 'miɲ˨˧', jin: 'miŋ1', jin_ipa: 'miŋ˩˩', en: 'bright / civilization', pos: 'Noun' },
+      '今': { py: 'jīn', bpmf: 'ㄐㄧㄣ', wg: 'chin¹', xej: 'چٍ', m_ipa: 't͡ɕin˥', jyut: 'gam1', yale: 'gām', c_ipa: 'kɐm˥', ts: 'gim1', ts_ipa: 'kim˧˧', tl: 'kim', poj: 'kim', hk_ipa: 'kim˦˦', amoy: 'kim', am_ipa: 'kim˦˦', tc: 'ging1', tc_ipa: 'kiŋ˧˧', fz: 'gĭng', fz_ipa: 'kiŋ˥˥', wu: 'tsin1', wu_ipa: 't͡ɕiɲ˥˧', jin: 't͡ɕiŋ1', jin_ipa: 't͡ɕiŋ˩˩', en: 'today / now', pos: 'Time Noun' },
+      '天': { py: 'tiān', bpmf: 'ㄊㄧㄢ', wg: 'tʻien¹', xej: 'تِيًا', m_ipa: 'tʰi̯ɛn˥', jyut: 'tin1', yale: 'tīn', c_ipa: 'tʰiːn˥', ts: 'ten1', ts_ipa: 'ten˧˧', tl: 'thinn', poj: 'thiⁿ', hk_ipa: 'tʰĩ˦˦', amoy: 'thiⁿ', am_ipa: 'tʰĩ˦˦', tc: 'tiang1', tc_ipa: 'tʰiaŋ˧˧', fz: 'tiĕng', fz_ipa: 'tʰieŋ˥˥', wu: 'thi1', wu_ipa: 'tʰi˥˧', jin: 'tʰiɛ1', jin_ipa: 'tʰiɛ˩˩', en: 'day / sky', pos: 'Noun' },
+      '下': { py: 'xià', bpmf: 'ㄒㄧㄚˋ', wg: 'hsia⁴', xej: 'شَا', m_ipa: 'ɕi̯ɑ˥˩', jyut: 'haa6', yale: 'hah', c_ipa: 'haː˨', ts: 'ha5', ts_ipa: 'ha˧˨', tl: 'hā', poj: 'hā', hk_ipa: 'ha˨˨', amoy: 'hā', am_ipa: 'ha˨˨', tc: 'hê7', tc_ipa: 'he˩˩', fz: 'hâ', fz_ipa: 'ha˨˦˨', wu: 'ɦo6', wu_ipa: 'ɦo˨˧', jin: 'ɕiɑ3', jin_ipa: 'ɕiɑ˦˥', en: 'fall / below', pos: 'Verb' },
+      '雨': { py: 'yǔ', bpmf: 'ㄩˇ', wg: 'yü³', xej: 'يُو', m_ipa: 'y˨˩˦', jyut: 'jyu5', yale: 'yúh', c_ipa: 'jyː˩˧', ts: 'yu2', ts_ipa: 'y˥˥', tl: 'hōo', poj: 'hō͘', hk_ipa: 'hɔ˨˨', amoy: 'hō͘', am_ipa: 'hɔ˨˨', tc: 'he7', tc_ipa: 'hɯ˩˩', fz: 'ṳ̄', fz_ipa: 'y˥˥', wu: 'ɦy6', wu_ipa: 'ɦy˨˧', jin: 'y2', jin_ipa: 'y˥˧', en: 'rain', pos: 'Noun' },
+      '我': { py: 'wǒ', bpmf: 'ㄨㄛˇ', wg: 'wo³', xej: 'وْ', m_ipa: 'wɔ˨˩˦', jyut: 'ngo5', yale: 'ngóh', c_ipa: 'ŋɔː˩˧', ts: 'ngai2', ts_ipa: 'ŋai̯˥˥', tl: 'guá', poj: 'góa', hk_ipa: 'ɡua˥˧', amoy: 'góa', am_ipa: 'ɡua˥˧', tc: 'ua2', tc_ipa: 'ua˥˨', fz: 'ngài', fz_ipa: 'ŋai˥˧', wu: 'ŋu5', wu_ipa: 'ŋɯ˧˦', jin: 'uə2', jin_ipa: 'uə˥˧', en: 'I / me', pos: 'Pronoun' },
+      '们': { py: 'men', bpmf: '˙ㄇㄣ', wg: 'mên⁵', xej: 'مٍ', m_ipa: 'mən', jyut: 'mun4', yale: 'mùhn', c_ipa: 'muːn˨˩', ts: 'mun3', ts_ipa: 'mun˨˨', tl: 'bûn', poj: 'bûn', hk_ipa: 'bun˨˦', amoy: 'bûn', am_ipa: 'bun˨˦', tc: 'mhung5', tc_ipa: 'muŋ˥˥', fz: 'mùng', fz_ipa: 'muŋ˥˧', wu: 'men6', wu_ipa: 'məɲ˨˧', jin: 'məŋ', jin_ipa: 'məŋ', en: '[PL]', pos: 'Plural Suffix' },
+      '在': { py: 'zài', bpmf: 'ㄗㄞˋ', wg: 'tsai⁴', xej: 'ذَىْ', m_ipa: 't͡saɪ̯˥˩', jyut: 'zoi6', yale: 'joih', c_ipa: 't͡sɔːi̯˨', ts: 'doi5', ts_ipa: 'tɔi̯˧˨', tl: 'tī', poj: 'tī', hk_ipa: 'ti˨˨', amoy: 'tī', am_ipa: 'ti˨˨', tc: 'zai7', tc_ipa: 't͡sai̯˩˩', fz: 'dâi', fz_ipa: 'tai̯˨˦˨', wu: 'ze6', wu_ipa: 'ze˨˧', jin: 't͡sæ3', jin_ipa: 't͡sæ˦˥', en: 'at / in', pos: 'Preposition' },
+      '茶': { py: 'chá', bpmf: 'ㄔㄚˊ', wg: 'chʻa²', xej: 'چَا', m_ipa: 'ʈʂʰɑ˧˥', jyut: 'caa4', yale: 'chàh', c_ipa: 't͡sʰaː˨˩', ts: 'ca3', ts_ipa: 't͡sʰa˨˨', tl: 'tê', poj: 'tê', hk_ipa: 'te˨˦', amoy: 'tê', am_ipa: 'te˨˦', tc: 'dê5', tc_ipa: 'te˥˥', fz: 'dà', fz_ipa: 'ta˥˧', wu: 'zo6', wu_ipa: 'zo˨˧', jin: 'tʂʰa1', jin_ipa: 'tʂʰa˩˩', en: 'tea', pos: 'Noun' },
+      '馆': { py: 'guǎn', bpmf: 'ㄍㄨㄢˇ', wg: 'kuan³', xej: 'قُوًا', m_ipa: 'kwän˨˩˦', jyut: 'gun2', yale: 'gún', c_ipa: 'kuːn˧˥', ts: 'gon2', ts_ipa: 'kɔn˥˥', tl: 'kuán', poj: 'koán', hk_ipa: 'kuan˥˧', amoy: 'koán', am_ipa: 'kuan˥˧', tc: 'guang2', tc_ipa: 'kuaŋ˥˨', fz: 'guāng', fz_ipa: 'kuaŋ˧˧', wu: 'koe5', wu_ipa: 'kø˧˦', jin: 'kuæ2', jin_ipa: 'kuæ˥˧', en: 'house / hall', pos: 'Noun' },
+      '里': { py: 'lǐ', bpmf: 'ㄌㄧˇ', wg: 'li³', xej: 'لِ', m_ipa: 'li˨˩˦', jyut: 'lei5', yale: 'léuih', c_ipa: 'lei̯˩˧', ts: 'lui2', ts_ipa: 'lui̯˥˥', tl: 'lí', poj: 'lí', hk_ipa: 'li˥˧', amoy: 'lí', am_ipa: 'li˥˧', tc: 'lai6', tc_ipa: 'lai̯˧˥', fz: 'diē', fz_ipa: 'tie˧˧', wu: 'li6', wu_ipa: 'li˨˧', jin: 'li2', jin_ipa: 'li˥˧', en: 'inside', pos: 'Localizer' },
+      '喝': { py: 'hē', bpmf: 'ㄏㄜ', wg: 'ho¹', xej: 'حْ', m_ipa: 'xɤ˥', jyut: 'hot3', yale: 'hot', c_ipa: 'hɔːt̚˧', ts: 'hot4', ts_ipa: 'hɔt̚˨˩', tl: 'lim', poj: 'lim', hk_ipa: 'lim˦˦', amoy: 'lim', am_ipa: 'lim˦˦', tc: 'huah4', tc_ipa: 'huak̚˨', fz: 'hiĕk', fz_ipa: 'hiek̚˨˦', wu: 'haq5', wu_ipa: 'hɑʔ˥', jin: 'xɤʔ4', jin_ipa: 'xɤʔ˨', en: 'drink', pos: 'Verb' },
+      '热': { py: 'rè', bpmf: 'ㄖㄜˋ', wg: 'jê⁴', xej: 'رْ', m_ipa: 'ʐɤ˥˩', jyut: 'jit6', yale: 'yiht', c_ipa: 'jiːt̚˨', ts: 'ngiat5', ts_ipa: 'ŋiat̚˧˨', tl: 'jua̍h', poj: 'joa̍h', hk_ipa: 'd͡ʑuaʔ˨˨', amoy: 'joa̍h', am_ipa: 'd͡zuaʔ˨˨', tc: 'ruah8', tc_ipa: 'zuak̚˦', fz: 'iĕk', fz_ipa: 'iek̚˨˦', wu: 'ngeq5', wu_ipa: 'ɲiɪʔ˥', jin: 'ʐɤʔ4', jin_ipa: 'ʐɤʔ˨', en: 'hot', pos: 'Adjective' },
+      '聊': { py: 'liáo', bpmf: 'ㄌㄧㄠˊ', wg: 'liao²', xej: 'لِيَوْ', m_ipa: 'li̯ɑʊ̯˧˥', jyut: 'liu4', yale: 'liùh', c_ipa: 'liːu̯˨˩', ts: 'liau3', ts_ipa: 'liau̯˨˨', tl: 'liâu', poj: 'liâu', hk_ipa: 'liau̯˨˦', amoy: 'liâu', am_ipa: 'liau̯˨˦', tc: 'lao5', tc_ipa: 'lau̯˥˥', fz: 'lièu', fz_ipa: 'lieu̯˥˧', wu: 'liau6', wu_ipa: 'liɑ˨˧', jin: 'liau1', jin_ipa: 'liau̯˩˩', en: 'chat', pos: 'Verb' },
+      '你': { py: 'nǐ', bpmf: 'ㄋㄧˇ', wg: 'ni³', xej: 'نِ', m_ipa: 'ni˨˩˦', jyut: 'nei5', yale: 'néih', c_ipa: 'nei̯˩˧', ts: 'ngui2', ts_ipa: 'ŋui̯˥˥', tl: 'lí', poj: 'lí', hk_ipa: 'li˥˧', amoy: 'lí', am_ipa: 'li˥˧', tc: 'leu2', tc_ipa: 'lɯu̯˥˨', fz: 'nṳ̄', fz_ipa: 'ny˥˥', wu: 'ɦŋ5', wu_ipa: 'ɦŋ̩˧˦', jin: 'ni2', jin_ipa: 'ni˥˧', en: 'you', pos: 'Pronoun' },
+      '好': { py: 'hǎo', bpmf: 'ㄏㄠˇ', wg: 'hao³', xej: 'حَوْ', m_ipa: 'xɑʊ̯˨˩˦', jyut: 'hou2', yale: 'hóu', c_ipa: 'hou̯˧˥', ts: 'ho2', ts_ipa: 'hɔ˥˥', tl: 'hó', poj: 'hó', hk_ipa: 'hɔ˥˧', amoy: 'hó', am_ipa: 'hɔ˥˧', tc: 'ho2', tc_ipa: 'ho˥˨', fz: 'hō', fz_ipa: 'ho˥˥', wu: 'hau5', wu_ipa: 'hɑ˧˦', jin: 'xau2', jin_ipa: 'xau̯˥˧', en: 'good / well', pos: 'Adjective' },
+      '水': { py: 'shuǐ', bpmf: 'ㄕㄨㄟˇ', wg: 'shui³', xej: 'شُوِ', m_ipa: 'ʂweɪ̯˨˩˦', jyut: 'seoi2', yale: 'séui', c_ipa: 'sɵy̯˧˥', ts: 'sui2', ts_ipa: 'sui̯˥˥', tl: 'tsuí', poj: 'chúi', hk_ipa: 't͡ɕui˥˧', amoy: 'chúi', am_ipa: 't͡ɕui˥˧', tc: 'zui2', tc_ipa: 't͡sui̯˥˨', fz: 'cūi', fz_ipa: 't͡sui̯˥˥', wu: 'sy5', wu_ipa: 'sɯ˧˦', jin: 'ʂuəi2', jin_ipa: 'ʂuəi̯˥˧', en: 'water', pos: 'Noun' },
+      '风': { py: 'fēng', bpmf: 'ㄈㄥ', wg: 'fêng¹', xej: 'فْ', m_ipa: 'fəŋ˥', jyut: 'fung1', yale: 'fūng', c_ipa: 'fʊŋ˥', ts: 'fung1', ts_ipa: 'fuŋ˧˧', tl: 'hong', poj: 'hong', hk_ipa: 'hɔŋ˦˦', amoy: 'hong', am_ipa: 'hɔŋ˦˦', tc: 'huang1', tc_ipa: 'huaŋ˧˧', fz: 'hŭng', fz_ipa: 'huŋ˥˥', wu: 'fon1', wu_ipa: 'foŋ˥˧', jin: 'fəŋ1', jin_ipa: 'fəŋ˩˩', en: 'wind', pos: 'Noun' },
+      '语': { py: 'yǔ', bpmf: 'ㄩˇ', wg: 'yü³', xej: 'يُو', m_ipa: 'y˨˩˦', jyut: 'jyu5', yale: 'yúh', c_ipa: 'jyː˩˧', ts: 'yu2', ts_ipa: 'y˥˥', tl: 'gú', poj: 'gú', hk_ipa: 'ɡu˥˧', amoy: 'gú', am_ipa: 'ɡu˥˧', tc: 'eu2', tc_ipa: 'ɯu̯˥˨', fz: 'ngṳ̄', fz_ipa: 'ŋy˥˥', wu: 'ɦy6', wu_ipa: 'ɦy˨˧', jin: 'y2', jin_ipa: 'y˥˧', en: 'speech / language', pos: 'Noun' },
+      '言': { py: 'yán', bpmf: 'ㄧㄢˊ', wg: 'yen²', xej: 'يًا', m_ipa: 'i̯ɛn˧˥', jyut: 'jin4', yale: 'yìhn', c_ipa: 'jiːn˨˩', ts: 'ngien3', ts_ipa: 'ŋien˨˨', tl: 'giân', poj: 'giân', hk_ipa: 'ɡian˨˦', amoy: 'giân', am_ipa: 'ɡian˨˦', tc: 'ngiang5', tc_ipa: 'ŋiaŋ˥˥', fz: 'ngièng', fz_ipa: 'ŋieŋ˥˧', wu: 'ɦi6', wu_ipa: 'ɦi˨˧', jin: 'iɛ1', jin_ipa: 'iɛ˩˩', en: 'words / speech', pos: 'Noun' }
+    };
+
+    // Helper to synthesize multi-dialect readings for compound words from CHAR_DICT
+    function composeCompoundPhonetics(chars) {
+      const list = [...chars].map((ch) => CHAR_DICT[ch]);
+      if (!list.every(Boolean)) {
+        return {
+          py: chars, bpmf: chars, wg: chars, xej: chars, m_ipa: `[${chars}]`,
+          jyut: chars, yale: chars, c_ipa: `[${chars}]`,
+          ts: chars, ts_ipa: `[${chars}]`,
+          tl: chars, poj: chars, hk_ipa: `[${chars}]`,
+          amoy: chars, am_ipa: `[${chars}]`,
+          tc: chars, tc_ipa: `[${chars}]`,
+          fz: chars, fz_ipa: `[${chars}]`,
+          wu: chars, wu_ipa: `[${chars}]`,
+          jin: chars, jin_ipa: `[${chars}]`
+        };
+      }
+      return {
+        py: list.map((x) => x.py).join(' '),
+        bpmf: list.map((x) => x.bpmf).join(' '),
+        wg: list.map((x) => x.wg).join('-'),
+        xej: list.map((x) => x.xej).join(' '),
+        m_ipa: `[${list.map((x) => x.m_ipa).join('.')}]`,
+        jyut: list.map((x) => x.jyut).join(' '),
+        yale: list.map((x) => x.yale).join(' '),
+        c_ipa: `[${list.map((x) => x.c_ipa).join('.')}]`,
+        ts: list.map((x) => x.ts).join(' '),
+        ts_ipa: `[${list.map((x) => x.ts_ipa).join('.')}]`,
+        tl: list.map((x) => x.tl).join('-'),
+        poj: list.map((x) => x.poj).join('-'),
+        hk_ipa: `[${list.map((x) => x.hk_ipa).join('.')}]`,
+        amoy: list.map((x) => x.amoy).join('-'),
+        am_ipa: `[${list.map((x) => x.am_ipa).join('.')}]`,
+        tc: list.map((x) => x.tc).join(' '),
+        tc_ipa: `[${list.map((x) => x.tc_ipa).join('.')}]`,
+        fz: list.map((x) => x.fz).join('-'),
+        fz_ipa: `[${list.map((x) => x.fz_ipa).join('.')}]`,
+        wu: list.map((x) => x.wu).join(' '),
+        wu_ipa: `[${list.map((x) => x.wu_ipa).join('.')}]`,
+        jin: list.map((x) => x.jin).join(' '),
+        jin_ipa: `[${list.map((x) => x.jin_ipa).join('.')}]`
+      };
+    }
+
+    // Curated Multi-Language & Multi-Dialect Sample Passages
+    const ANALYZER_PRESETS = {
+      zh_culture: {
+        lang: 'zh',
+        text: '古代丝绸之路连接了东方与西方文明。',
+        tokens: [
+          {
+            word: '古代',
+            ...composeCompoundPhonetics('古代'),
+            naturalEn: 'Ancient',
+            literalEn: 'ancient-era',
+            pos: 'Noun Modifier',
+            note: 'Combines 古 (gǔ, ancient) + 代 (dài, era/dynasty) to form a temporal modifier before a noun phrase.'
+          },
+          {
+            word: '丝绸之路',
+            ...composeCompoundPhonetics('丝绸之路'),
+            naturalEn: 'the Silk Road',
+            literalEn: 'silk-silk.cloth-[of]-road',
+            pos: 'Proper Noun',
+            note: '丝绸 (sīchóu, silk) + literary genitive 之 (zhī, of) + 路 (lù, road). Classical 之 links modifier and head noun.'
+          },
+          {
+            word: '连接了',
+            ...composeCompoundPhonetics('连接了'),
+            naturalEn: 'connected',
+            literalEn: 'connect-join-[PFV]',
+            pos: 'Verb + Aspect',
+            note: '连接 (liánjiē, to connect) followed by aspect particle 了 (le), marking a completed/realized action.'
+          },
+          {
+            word: '东方',
+            ...composeCompoundPhonetics('东方'),
+            naturalEn: 'the East',
+            literalEn: 'east-direction',
+            pos: 'Noun',
+            note: '东 (dōng, east) + 方 (fāng, side/region), denoting East Asia.'
+          },
+          {
+            word: '与',
+            ...composeCompoundPhonetics('与'),
+            naturalEn: 'and',
+            literalEn: 'and/with',
+            pos: 'Conjunction',
+            note: 'Formal/written coordinating conjunction ("and") joining two noun phrases (unlike 口语 跟 gēn in casual speech).'
+          },
+          {
+            word: '西方',
+            ...composeCompoundPhonetics('西方'),
+            naturalEn: 'the West',
+            literalEn: 'west-direction',
+            pos: 'Noun',
+            note: '西 (xī, west) + 方 (fāng, region), referring to Central/Western Eurasia and the Mediterranean world.'
+          },
+          {
+            word: '文明。',
+            ...composeCompoundPhonetics('文明'),
+            naturalEn: 'civilizations.',
+            literalEn: 'script/culture-bright [civilization].',
+            pos: 'Object Noun',
+            note: '文明 (wénmíng, civilization) serves as the direct object of 连接了.'
+          }
+        ],
+        grammarParagraphs: [
+          '<strong>1. Core SVO Word Order &amp; Modifier-Head Rule:</strong> Like English, standard Sinitic syntax follows <em>Subject – Verb – Object</em>: [古代丝绸之路] (Subject) + [连接了] (Verb) + [东方与西方文明] (Object). Crucially, modifiers always precede the nouns they describe: <em>古代</em> ("ancient") stands directly before <em>丝绸之路</em> ("the Silk Road").',
+          '<strong>2. Classical Particle 之 (zhī) Inside a Compound:</strong> Inside 丝绸之路, 之 acts as a literary possessive/associative linker ("of"), giving a compact four-character structure that bridges classical style with modern compound naming.',
+          '<strong>3. Aspect Particle 了 (le) Instead of Tense Conjugation:</strong> Chinese verbs do not change form for past tense. Instead, 了 attaches after 连接 to indicate that the connecting event is treated as a completed historical fact within the clause.',
+          '<strong>4. Cross-Dialectal Phonetic Preservation:</strong> Notice how lexical roots like 丝 (silk), 路 (road), 东 (east), and 西 (west) preserve distinct historical initial and final consonants across Mandarin, Cantonese (Jyutping/Yale), Taishanese, Taiwanese/Amoy Hokkien (Tâi-lô/POJ), Teochew (Peng\'im), Fuzhou (Bàng-uâ-cê), Wu (Wugniu), and Jin.'
+        ]
+      },
+      zh_daily: {
+        lang: 'zh',
+        text: '今天下雨，我们在茶馆里喝热茶聊天。',
+        tokens: [
+          {
+            word: '今天',
+            ...composeCompoundPhonetics('今天'),
+            naturalEn: 'Today,',
+            literalEn: 'today-day,',
+            pos: 'Time Adverbial',
+            note: 'Time expressions in Chinese typically appear near the beginning of the clause, before or right after the subject.'
+          },
+          {
+            word: '下雨，',
+            ...composeCompoundPhonetics('下雨，'),
+            naturalEn: "it's raining,",
+            literalEn: 'fall-rain,',
+            pos: 'Verb-Object Clause',
+            note: 'Weather expressions often use a Verb + Object structure: 下 (xià, descend/fall) + 雨 (yǔ, rain).'
+          },
+          {
+            word: '我们',
+            ...composeCompoundPhonetics('我们'),
+            naturalEn: 'we',
+            literalEn: 'I-[PL]',
+            pos: 'Pronoun (1PL)',
+            note: '我 (wǒ, I/me) + plural suffix 们 (men) = "we / us".'
+          },
+          {
+            word: '在',
+            ...composeCompoundPhonetics('在'),
+            naturalEn: 'are in',
+            literalEn: 'at/in',
+            pos: 'Coverb / Preposition',
+            note: '在 introduces the location where the following action takes place.'
+          },
+          {
+            word: '茶馆里',
+            ...composeCompoundPhonetics('茶馆里'),
+            naturalEn: 'the teahouse',
+            literalEn: 'tea-house-inside',
+            pos: 'Locative Phrase',
+            note: '茶馆 (cháguǎn, teahouse) + 里 (lǐ, inside), forming a spatial location phrase.'
+          },
+          {
+            word: '喝',
+            ...composeCompoundPhonetics('喝'),
+            naturalEn: 'drinking',
+            literalEn: 'drink',
+            pos: 'Verb',
+            note: 'Action verb meaning "to drink".'
+          },
+          {
+            word: '热茶',
+            ...composeCompoundPhonetics('热茶'),
+            naturalEn: 'hot tea',
+            literalEn: 'hot-tea',
+            pos: 'Noun Phrase',
+            note: 'Adjective 热 (rè, hot) directly modifies 茶 (chá, tea).'
+          },
+          {
+            word: '聊天。',
+            ...composeCompoundPhonetics('聊天。'),
+            naturalEn: 'and chatting.',
+            literalEn: 'chat-sky.',
+            pos: 'Serial Verb Phrase',
+            note: '聊天 (liáotiān, lit. "chatting [under] the sky") forms a serial verb sequence with 喝热茶 ("drink hot tea and chat").'
+          }
+        ],
+        grammarParagraphs: [
+          '<strong>1. Serial Verb Constructions (连动式):</strong> Chinese frequently strings two or more verb phrases together without an explicit conjunction like "and". Here, 喝热茶 ("drink hot tea") and 聊天 ("chat") occur sequentially as part of one unified situation.',
+          '<strong>2. Location Phrases &amp; Postpositional Localizers:</strong> English uses prepositions like "inside the teahouse", whereas Chinese pairs 在 with a noun phrase followed by a localizer like 里 ("inside").',
+          '<strong>3. Zero Tense Marking:</strong> Present continuous meaning ("are raining", "are drinking/chatting") comes from context and time words like 今天 ("today") rather than verb inflection.'
+        ]
+      },
+      zh_dialect_greetings: {
+        lang: 'zh',
+        text: '你好，水与风，茶馆里喝热茶。',
+        tokens: [
+          {
+            word: '你好，',
+            ...composeCompoundPhonetics('你好，'),
+            naturalEn: 'Hello,',
+            literalEn: 'you-good,',
+            pos: 'Greeting',
+            note: 'Standard Mandarin greeting 你好 (nǐhǎo); compare Cantonese néih hóu, Taiwanese lí hó, and Wu/Shanghainese.'
+          },
+          {
+            word: '水',
+            ...composeCompoundPhonetics('水'),
+            naturalEn: 'water',
+            literalEn: 'water',
+            pos: 'Noun',
+            note: 'Shows classic consonant correspondences: Mandarin shuǐ [ʂweɪ̯˨˩˦], Cantonese seoi2 [sɵy̯˧˥], Hokkien tsuí/chúi [t͡ɕui˥˧], Teochew zui2 [t͡sui̯˥˨].'
+          },
+          {
+            word: '与',
+            ...composeCompoundPhonetics('与'),
+            naturalEn: 'and',
+            literalEn: 'and',
+            pos: 'Conjunction',
+            note: 'Literary conjunction connecting nouns.'
+          },
+          {
+            word: '风，',
+            ...composeCompoundPhonetics('风，'),
+            naturalEn: 'wind,',
+            literalEn: 'wind,',
+            pos: 'Noun',
+            note: 'Final nasal shifts from [-ŋ] in Mandarin/Cantonese/Hokkien to nasalized [-ɑ̃] in Shanghainese/Wu (faon1).'
+          },
+          {
+            word: '茶馆里',
+            ...composeCompoundPhonetics('茶馆里'),
+            naturalEn: 'inside the teahouse',
+            literalEn: 'tea-house-inside',
+            pos: 'Locative Phrase',
+            note: 'Locative phrase anchored by 里 ("inside").'
+          },
+          {
+            word: '喝',
+            ...composeCompoundPhonetics('喝'),
+            naturalEn: 'drink',
+            literalEn: 'drink',
+            pos: 'Verb',
+            note: 'Note that Southern Min (Hokkien/Teochew) uses 啉 (lim / ngam) for drinking liquids, while Mandarin/Cantonese/Wu use 喝/飲.'
+          },
+          {
+            word: '热茶。',
+            ...composeCompoundPhonetics('热茶。'),
+            naturalEn: 'hot tea.',
+            literalEn: 'hot-tea.',
+            pos: 'Noun Phrase',
+            note: 'Modifier 热 ("hot") precedes head noun 茶 ("tea").'
+          }
+        ],
+        grammarParagraphs: [
+          '<strong>1. Sinitic Phonological Divergence vs. Shared Script:</strong> Chinese varieties often share the same written characters while diverging sharply in initials, vowels, and tones—such as entering/checked tones (-p, -t, -k, -ʔ) preserved in Cantonese, Taishanese, Hokkien, Teochew, Fuzhou, Wu, and Jin, but lost in standard Mandarin.',
+          '<strong>2. Lexical Isoglosses Across Varieties:</strong> While literary/formal vocabulary often aligns across dialects, everyday verbs and function words can differ (for instance, Hokkien commonly uses 啉 for "drink" alongside 喝 in Mandarin).'
+        ]
+      },
+      cs_prague: {
+        lang: 'cs',
+        text: 'Ráno v Praze pijeme silnou kávu a čteme noviny.',
+        tokens: [
+          { word: 'Ráno', py: 'Rá-no', naturalEn: 'In the morning', literalEn: 'morning.NOM/ACC', pos: 'Noun / Adverbial', note: 'Nominative/accusative singular used adverbially to express time of day.' },
+          { word: 'v', py: 'v', naturalEn: 'in', literalEn: 'in [+LOC]', pos: 'Preposition', note: 'Preposition v governs the locative case when denoting static location.' },
+          { word: 'Praze', py: 'Pra-ze', naturalEn: 'Prague,', literalEn: 'Prague.LOC.SG', pos: 'Proper Noun (Locative)', note: 'Consonant mutation k → z before locative -e (Praha → v Praze).' },
+          { word: 'pijeme', py: 'pi-je-me', naturalEn: 'we drink', literalEn: 'drink.1PL.PRS', pos: 'Verb (1st Pl.)', note: 'The suffix -me encodes 1st-person plural ("we"), allowing pronoun drop (my).' },
+          { word: 'silnou', py: 'sil-nou', naturalEn: 'strong', literalEn: 'strong.ACC.SG.FEM', pos: 'Adjective (Acc. Fem.)', note: 'Agrees in gender (feminine), number (singular), and case (accusative) with kávu.' },
+          { word: 'kávu', py: 'ká-vu', naturalEn: 'coffee', literalEn: 'coffee.ACC.SG.FEM', pos: 'Noun (Accusative)', note: 'Direct object of pijeme; feminine -a changes to -u in the accusative singular.' },
+          { word: 'a', py: 'a', naturalEn: 'and', literalEn: 'and', pos: 'Conjunction', note: 'Standard coordinating conjunction connecting clauses or verb phrases.' },
+          { word: 'čteme', py: 'čte-me', naturalEn: 'we read', literalEn: 'read.1PL.PRS', pos: 'Verb (1st Pl.)', note: 'Shares the 1st-person plural ending -me with pijeme.' },
+          { word: 'noviny.', py: 'no-vi-ny', naturalEn: 'the newspaper.', literalEn: 'newspaper.ACC.PL', pos: 'Noun (Pluralia Tantum)', note: 'Noviny is a plural-only noun in Czech ("newspaper"), taking plural case forms.' }
+        ],
+        grammarParagraphs: [
+          '<strong>1. Rich Inflectional Morphology &amp; Pronoun Drop:</strong> Czech is a fusional Slavic language where verb endings mark person and number (-me = "we"), making subject pronouns like <em>my</em> ("we") optional unless emphasized.',
+          '<strong>2. Grammatical Case &amp; Adjectival Agreement:</strong> Nouns and adjectives change endings according to grammatical role. Here, <em>silnou kávu</em> is in the feminine accusative singular because it is the direct object of <em>pijeme</em>, while <em>v Praze</em> uses the locative case after <em>v</em>.',
+          '<strong>3. No Definite or Indefinite Articles:</strong> Czech has no equivalents of "a/an" or "the"; definiteness and specificity are inferred from context, word order, and discourse.'
+        ]
+      },
+      ja_kyoto: {
+        lang: 'ja',
+        text: '秋に京都の古いお寺を見に行きました。',
+        tokens: [
+          { word: '秋に', py: 'aki ni', naturalEn: 'In autumn,', literalEn: 'autumn [at/in:NI]', pos: 'Noun + Particle に', note: 'Particle に marks a specific time point or period when an event occurs.' },
+          { word: '京都の', py: 'Kyōto no', naturalEn: "Kyoto's", literalEn: 'Kyoto [GEN:NO]', pos: 'Proper Noun + の', note: 'Genitive particle の links modifier 京都 to head noun 古いお寺.' },
+          { word: '古い', py: 'furui', naturalEn: 'old', literalEn: 'old.NPST', pos: 'i-Adjective', note: 'An い-adjective placed directly before the noun it modifies.' },
+          { word: 'お寺を', py: 'o-tera o', naturalEn: 'temples', literalEn: '[HON]-temple [ACC:O]', pos: 'Noun + Honorific + を', note: 'Honorific prefix お- + 寺 (temple) + direct object marker を.' },
+          { word: '見に', py: 'mi ni', naturalEn: 'to see', literalEn: 'see/look [PURP:NI]', pos: 'Verb Stem + に', note: 'Verb stem 見 + に expresses purpose ("in order to see") before a motion verb.' },
+          { word: '行きました。', py: 'ikimashita.', naturalEn: 'we went.', literalEn: 'go.POLITE.PAST.', pos: 'Verb (Polite Past)', note: '行く (go) conjugated to polite past form 行きました (-mashita).' }
+        ],
+        grammarParagraphs: [
+          '<strong>1. SOV Word Order &amp; Postpositional Particles:</strong> Japanese places the main verb at the end of the sentence and uses postpositional particles (に, の, を) after nouns to indicate grammatical relations like location/time, possession, and direct object.',
+          '<strong>2. Purpose Construction [Verb Stem + に + Motion Verb]:</strong> Attaching に to the continuative stem of a verb (見, "see") before a motion verb (行きました, "went") expresses purpose ("went to see").',
+          '<strong>3. Politeness &amp; Tense Marking on the Final Verb:</strong> Tense (past) and speech register (polite -ます) are marked on the clause-final predicate rather than on nouns.'
+        ]
+      }
+    };
+
+    // All 10 Free Chinese Dialect Dictionaries requested
+    const DIALECT_DICTIONARIES = [
+      {
+        name: 'ChhoeTaigi (台語辭典彙整)',
+        variety: 'Taiwanese Hokkien · Tâi-lô & POJ',
+        url: 'https://chhoe.taigi.info/',
+        searchUrl: (q) => `https://chhoe.taigi.info/#/`,
+        badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        desc: 'Comprehensive aggregator of Taiwanese Hokkien dictionaries supporting Hanji, Tâi-lô, and Pe̍h-ōe-jī (POJ) lookup.'
+      },
+      {
+        name: 'Taigi FHL (台語文數位典藏)',
+        variety: 'Taiwanese Hokkien · POJ & Hanji',
+        url: 'https://taigi.fhl.net/dict/index.html',
+        searchUrl: (q) => `https://taigi.fhl.net/dict/index.html`,
+        badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        desc: 'Digital Taiwanese Hokkien dictionary archive with Pe̍h-ōe-jī (POJ) romanization, character variants, and example entries.'
+      },
+      {
+        name: 'English–Amoy Dictionary (Douglas / Carstairs)',
+        variety: 'Amoy Hokkien · POJ & IPA',
+        url: 'https://bsop.edu.ph/wp-content/uploads/2013/09/English-Amoy-Dictionary.pdf',
+        searchUrl: (q) => `https://bsop.edu.ph/wp-content/uploads/2013/09/English-Amoy-Dictionary.pdf`,
+        badge: 'bg-teal-50 text-teal-800 border-teal-200',
+        desc: 'Historical reference dictionary for Amoy (Xiamen) Hokkien using Pe̍h-ōe-jī romanization and English glosses.'
+      },
+      {
+        name: 'Cantonese.org / CC-Canto (粵語辭典)',
+        variety: 'Cantonese · Jyutping & Yale',
+        url: 'https://cantonese.org/',
+        searchUrl: (q) => `https://cantonese.org/search.php?q=${encodeURIComponent(q)}`,
+        badge: 'bg-amber-50 text-amber-800 border-amber-200',
+        desc: 'Open Cantonese dictionary providing Jyutping romanization, English definitions, and character/word search.'
+      },
+      {
+        name: 'TaishanDict (台山話辭典)',
+        variety: 'Taishanese / Hoisan-wa · Romanization & IPA',
+        url: 'https://www.taishandict.com/',
+        searchUrl: (q) => `https://www.taishandict.com/`,
+        badge: 'bg-orange-50 text-orange-800 border-orange-200',
+        desc: 'Dedicated dictionary and phonetic reference for Taishanese (Hoisan-wa), a distinct Yue variety spoken in Taishan and diaspora communities.'
+      },
+      {
+        name: 'Mogher Teochew Dictionary (潮州話辭典)',
+        variety: 'Teochew / Chaoshan · Peng\'im & IPA',
+        url: 'https://www.mogher.com/',
+        searchUrl: (q) => `https://www.mogher.com/`,
+        badge: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+        desc: 'Online Teochew (Diojiu) dictionary featuring Peng\'im romanization, character lookup, and Southern Min vocabulary.'
+      },
+      {
+        name: 'SeeDict Fuzhou Dictionary (福州話辭典)',
+        variety: 'Eastern Min / Fuzhou · Bàng-uâ-cê & IPA',
+        url: 'https://seedict.com/',
+        searchUrl: (q) => `https://seedict.com/`,
+        badge: 'bg-sky-50 text-sky-800 border-sky-200',
+        desc: 'Fuzhou (Hók-ciŭ) dialect dictionary supporting Bàng-uâ-cê (BUC) romanization, tone sandhi, and character search.'
+      },
+      {
+        name: 'Wu-Chinese MiniDict (吳語小辭典)',
+        variety: 'Wu Chinese · IPA & Romanization',
+        url: 'https://wu-chinese.com/minidict/index.php',
+        searchUrl: (q) => `https://wu-chinese.com/minidict/index.php`,
+        badge: 'bg-violet-50 text-violet-800 border-violet-200',
+        desc: 'Lexicon for Wu dialects (including Shanghainese, Suzhounese, and Ningbonese) with IPA transcriptions and glosses.'
+      },
+      {
+        name: 'Wugniu (吳語學堂 · 吳音)',
+        variety: 'Wu / Shanghainese · Wugniu & IPA',
+        url: 'https://wugniu.com/',
+        searchUrl: (q) => `https://wugniu.com/`,
+        badge: 'bg-purple-50 text-purple-800 border-purple-200',
+        desc: 'Modern Wu Chinese dictionary and Wugniu phonetic system covering Shanghainese and regional Wu varieties.'
+      },
+      {
+        name: 'Academia Sinica Xiaoxuetang Jinyu (小學堂晉語)',
+        variety: 'Jin Chinese · Phonology & Character Forms',
+        url: 'https://xiaoxue.iis.sinica.edu.tw/jinyu/?kaiOrder=4448',
+        searchUrl: (q) => `https://xiaoxue.iis.sinica.edu.tw/jinyu/?kaiOrder=4448`,
+        badge: 'bg-rose-50 text-rose-800 border-rose-200',
+        desc: 'Academia Sinica Xiaoxuetang database for Jin Chinese (Jinyu), documenting character readings and dialectal phonology.'
+      }
+    ];
+
+    let currentAnalysis = null;
+    let selectedTokenIndex = 0;
+    let translationMode = 'live'; // 'live' | 'offline'
+    let geminiCustomApiKey = '';
+    const DEFAULT_DAILY_RPD_LIMIT = 1500;
+    let rpdState = {
+      date: getTodayDateKey(),
+      used: 0,
+      limit: DEFAULT_DAILY_RPD_LIMIT
+    };
+
+    // Simplified <-> Traditional auto-translator state & fallback character map
+    let simpTradDirection = 's2t'; // 's2t' | 't2s'
+    const FALLBACK_S2T_MAP = {
+      '丝': '絲', '绸': '綢', '连': '連', '东': '東', '与': '與', '语': '語',
+      '言': '言', '馆': '館', '热': '熱', '学': '學', '习': '習', '国': '國',
+      '让': '讓', '视': '視', '觉': '覺', '历': '歷', '书': '書', '车': '車',
+      '门': '門', '问': '問', '间': '間', '开': '開', '关': '關', '长': '長',
+      '发': '發', '见': '見', '听': '聽', '说': '說', '话': '話', '读': '讀',
+      '写': '寫', '买': '買', '卖': '賣', '爱': '愛', '飞': '飛', '马': '馬',
+      '鸟': '鳥', '鱼': '魚', '龙': '龍', '华': '華', '汉': '漢', '体': '體',
+      '简': '簡', '繁': '繁', '转': '轉', '换': '換', '译': '譯', '词': '詞'
+    };
+    const FALLBACK_T2S_MAP = Object.fromEntries(
+      Object.entries(FALLBACK_S2T_MAP).map(([s, t]) => [t, s])
+    );
+    let openccS2T = null;
+    let openccT2S = null;
+
+    function initSimpTradConverter() {
+      const badge = document.getElementById('simp-trad-engine-badge');
+      try {
+        if (window.OpenCC && typeof window.OpenCC.Converter === 'function') {
+          openccS2T = window.OpenCC.Converter({ from: 'cn', to: 'tw' });
+          openccT2S = window.OpenCC.Converter({ from: 'tw', to: 'cn' });
+          if (badge) badge.textContent = 'OpenCC Auto Engine Active';
+          return;
+        }
+      } catch (e) {
+        console.warn('OpenCC fallback in use', e);
+      }
+      if (badge) badge.textContent = 'Built-in Variant Map Active';
+    }
+
+    function convertChineseScript(text, direction) {
+      if (!text) return '';
+      if (direction === 's2t' && typeof openccS2T === 'function') {
+        return openccS2T(text);
+      }
+      if (direction === 't2s' && typeof openccT2S === 'function') {
+        return openccT2S(text);
+      }
+      const map = direction === 's2t' ? FALLBACK_S2T_MAP : FALLBACK_T2S_MAP;
+      return [...text].map((ch) => map[ch] || ch).join('');
+    }
+
+    function setSimpTradDirection(dir) {
+      simpTradDirection = dir === 't2s' ? 't2s' : 's2t';
+      const s2tBtn = document.getElementById('simp-trad-dir-s2t');
+      const t2sBtn = document.getElementById('simp-trad-dir-t2s');
+      const inLabel = document.getElementById('simp-trad-input-label');
+      const outLabel = document.getElementById('simp-trad-output-label');
+
+      if (simpTradDirection === 's2t') {
+        s2tBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-emerald-700 shadow-sm';
+        t2sBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900';
+        inLabel.textContent = 'Simplified Input (简体中文)';
+        outLabel.textContent = 'Traditional Output (繁體中文)';
+      } else {
+        t2sBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-emerald-700 shadow-sm';
+        s2tBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900';
+        inLabel.textContent = 'Traditional Input (繁體中文)';
+        outLabel.textContent = 'Simplified Output (简体中文)';
+      }
+
+      runAutoSimpTradTranslation();
+    }
+
+    function runAutoSimpTradTranslation() {
+      const inputEl = document.getElementById('simp-trad-input');
+      const outputEl = document.getElementById('simp-trad-output');
+      const summaryEl = document.getElementById('simp-trad-diff-summary');
+      if (!inputEl || !outputEl) return;
+
+      const src = inputEl.value;
+      const converted = convertChineseScript(src, simpTradDirection);
+      outputEl.value = converted;
+
+      const srcChars = [...src];
+      const outChars = [...converted];
+      let changedCount = 0;
+      for (let i = 0; i < Math.min(srcChars.length, outChars.length); i++) {
+        if (srcChars[i] !== outChars[i]) changedCount++;
+      }
+      if (summaryEl) {
+        summaryEl.textContent = `${changedCount} character variant${changedCount === 1 ? '' : 's'} converted`;
+      }
+    }
+
+    function syncAnalyzerTextIntoConverter() {
+      const analyzerText = document.getElementById('source-text-input')?.value || '';
+      const converterInput = document.getElementById('simp-trad-input');
+      if (!converterInput) return;
+      converterInput.value = analyzerText;
+      runAutoSimpTradTranslation();
+      showToast('Imported text from Analyzer into Simp ↔ Trad converter', 'info');
+    }
+
+    function swapSimpTradTexts() {
+      const inputEl = document.getElementById('simp-trad-input');
+      const outputEl = document.getElementById('simp-trad-output');
+      if (!inputEl || !outputEl) return;
+      const prevOut = outputEl.value;
+      setSimpTradDirection(simpTradDirection === 's2t' ? 't2s' : 's2t');
+      if (prevOut) {
+        inputEl.value = prevOut;
+        runAutoSimpTradTranslation();
+      }
+    }
+
+    function copySimpTradOutput() {
+      const outputEl = document.getElementById('simp-trad-output');
+      if (!outputEl || !outputEl.value) {
+        showToast('Nothing to copy yet.', 'warning');
+        return;
+      }
+      outputEl.select();
+      try {
+        document.execCommand('copy');
+        showToast('Copied converted text to clipboard!', 'success');
+      } catch (e) {
+        showToast('Unable to copy automatically.', 'warning');
+      }
+    }
+
+    function sendConvertedToAnalyzer() {
+      const outputEl = document.getElementById('simp-trad-output');
+      const analyzerInput = document.getElementById('source-text-input');
+      if (!outputEl || !outputEl.value.trim() || !analyzerInput) {
+        showToast('Enter text in the Simp ↔ Trad converter first.', 'warning');
+        return;
+      }
+      analyzerInput.value = outputEl.value.trim();
+      document.getElementById('language-select').value = 'zh';
+      handleLanguageChange();
+      analyzeCurrentText();
+    }
+
+    function getTodayDateKey() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function loadRpdQuota() {
+      const today = getTodayDateKey();
+      try {
+        const raw = localStorage.getItem('lexilens_gemini_rpd_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const limit = Number.isFinite(Number(parsed.limit)) && Number(parsed.limit) > 0
+            ? Math.floor(Number(parsed.limit))
+            : DEFAULT_DAILY_RPD_LIMIT;
+          const used = parsed.date === today && Number.isFinite(Number(parsed.used)) && Number(parsed.used) >= 0
+            ? Math.floor(Number(parsed.used))
+            : 0;
+          rpdState = { date: today, used, limit };
+        } else {
+          rpdState = { date: today, used: 0, limit: DEFAULT_DAILY_RPD_LIMIT };
+        }
+      } catch (e) {
+        rpdState = { date: today, used: 0, limit: DEFAULT_DAILY_RPD_LIMIT };
+      }
+      saveRpdQuota();
+      renderRpdBar();
+    }
+
+    function saveRpdQuota() {
+      try {
+        localStorage.setItem('lexilens_gemini_rpd_v1', JSON.stringify(rpdState));
+      } catch (e) {
+        console.warn('Unable to save RPD quota', e);
+      }
+    }
+
+    function ensureCurrentDayRpd() {
+      const today = getTodayDateKey();
+      if (rpdState.date !== today) {
+        rpdState.date = today;
+        rpdState.used = 0;
+        saveRpdQuota();
+      }
+    }
+
+    function recordGeminiRequest() {
+      ensureCurrentDayRpd();
+      rpdState.used += 1;
+      saveRpdQuota();
+      renderRpdBar();
+    }
+
+    function updateRpdLimit() {
+      ensureCurrentDayRpd();
+      const inputEl = document.getElementById('rpd-limit-input');
+      const val = Math.floor(Number(inputEl?.value));
+      if (!Number.isFinite(val) || val < 1) {
+        if (inputEl) inputEl.value = rpdState.limit;
+        showToast('Daily RPD limit must be at least 1.', 'warning');
+        return;
+      }
+      rpdState.limit = val;
+      saveRpdQuota();
+      renderRpdBar();
+      showToast(`Daily RPD limit set to ${val.toLocaleString()} requests.`, 'info');
+    }
+
+    function resetDailyRpdUsage() {
+      rpdState.date = getTodayDateKey();
+      rpdState.used = 0;
+      saveRpdQuota();
+      renderRpdBar();
+      showToast("Today's Gemini RPD counter reset to 0.", 'info');
+    }
+
+    function renderRpdBar() {
+      ensureCurrentDayRpd();
+      const dateBadge = document.getElementById('rpd-date-badge');
+      const remainingLabel = document.getElementById('rpd-remaining-label');
+      const summaryEl = document.getElementById('rpd-usage-summary');
+      const barEl = document.getElementById('rpd-progress-bar');
+      const limitInput = document.getElementById('rpd-limit-input');
+
+      if (limitInput && document.activeElement !== limitInput) {
+        limitInput.value = rpdState.limit;
+      }
+
+      const remaining = Math.max(0, rpdState.limit - rpdState.used);
+      const remainingPct = rpdState.limit > 0
+        ? Math.max(0, Math.min(100, (remaining / rpdState.limit) * 100))
+        : 0;
+
+      if (dateBadge) dateBadge.textContent = rpdState.date;
+      if (remainingLabel) {
+        remainingLabel.textContent = `${remaining.toLocaleString()} / ${rpdState.limit.toLocaleString()} left`;
+      }
+      if (summaryEl) {
+        summaryEl.textContent = `Used today: ${rpdState.used.toLocaleString()} RPD (${remainingPct.toFixed(1)}% remaining)`;
+      }
+      if (barEl) {
+        barEl.style.width = `${remainingPct}%`;
+        barEl.className = 'h-full rounded-full transition-all duration-300 ' + (
+          remainingPct <= 10
+            ? 'bg-gradient-to-r from-rose-600 to-red-500'
+            : remainingPct <= 30
+              ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+              : 'bg-gradient-to-r from-indigo-600 to-violet-500'
+        );
+      }
+    }
+
+    function countCodePoints(str) {
+      return [...(str || '')].length;
+    }
+
+    function getActiveGeminiApiKey() {
+      const inputVal = (document.getElementById('gemini-api-key-input')?.value || '').trim();
+      return inputVal || geminiCustomApiKey || '';
+    }
+
+    function loadApiConfig() {
+      try {
+        const savedKey = localStorage.getItem('lexilens_gemini_api_key_v1') || '';
+        const savedMode = localStorage.getItem('lexilens_translation_mode_v1') || 'live';
+        geminiCustomApiKey = savedKey;
+        translationMode = savedMode === 'offline' ? 'offline' : 'live';
+        const inputEl = document.getElementById('gemini-api-key-input');
+        if (inputEl && savedKey) {
+          inputEl.value = savedKey;
+        }
+      } catch (e) {
+        console.warn('Unable to load Gemini config', e);
+      }
+      updateApiStatusBadge();
+      applyTranslationModeUI();
+    }
+
+    function handleApiKeyInputChange() {
+      const inputEl = document.getElementById('gemini-api-key-input');
+      geminiCustomApiKey = (inputEl ? inputEl.value : '').trim();
+      updateApiStatusBadge();
+    }
+
+    function saveApiKeyToStorage() {
+      const inputEl = document.getElementById('gemini-api-key-input');
+      geminiCustomApiKey = (inputEl ? inputEl.value : '').trim();
+      try {
+        localStorage.setItem('lexilens_gemini_api_key_v1', geminiCustomApiKey);
+      } catch (e) {
+        console.warn('Unable to save Gemini key', e);
+      }
+      updateApiStatusBadge();
+      if (geminiCustomApiKey) {
+        showToast('Custom Gemini API key saved locally.', 'success');
+      } else {
+        showToast('Using default runtime Gemini API key.', 'info');
+      }
+    }
+
+    function clearApiKeyFromStorage() {
+      geminiCustomApiKey = '';
+      const inputEl = document.getElementById('gemini-api-key-input');
+      if (inputEl) inputEl.value = '';
+      try {
+        localStorage.removeItem('lexilens_gemini_api_key_v1');
+      } catch (e) {
+        console.warn('Unable to clear Gemini key', e);
+      }
+      updateApiStatusBadge();
+      showToast('Cleared custom API key override.', 'info');
+    }
+
+    function toggleApiKeyVisibility() {
+      const inputEl = document.getElementById('gemini-api-key-input');
+      if (!inputEl) return;
+      inputEl.type = inputEl.type === 'password' ? 'text' : 'password';
+    }
+
+    function setTranslationMode(mode) {
+      translationMode = mode === 'offline' ? 'offline' : 'live';
+      try {
+        localStorage.setItem('lexilens_translation_mode_v1', translationMode);
+      } catch (e) {
+        console.warn('Unable to persist mode', e);
+      }
+      applyTranslationModeUI();
+      updateApiStatusBadge();
+    }
+
+    function applyTranslationModeUI() {
+      const liveBtn = document.getElementById('mode-btn-live');
+      const offlineBtn = document.getElementById('mode-btn-offline');
+      const keyRow = document.getElementById('api-key-controls-row');
+
+      if (translationMode === 'live') {
+        liveBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-indigo-700 shadow-sm';
+        offlineBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900';
+        if (keyRow) keyRow.classList.remove('opacity-50');
+      } else {
+        offlineBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-indigo-700 shadow-sm';
+        liveBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:text-slate-900';
+        if (keyRow) keyRow.classList.add('opacity-50');
+      }
+    }
+
+    function updateApiStatusBadge() {
+      const badge = document.getElementById('api-connection-status');
+      if (!badge) return;
+      if (translationMode === 'offline') {
+        badge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200';
+        badge.textContent = 'Offline Lexicon / Demo Mode';
+      } else {
+        badge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+        badge.textContent = geminiCustomApiKey ? 'Live Gemini Ready (Custom Key)' : 'Live Gemini Ready (Runtime Key)';
+      }
+    }
+
+    async function callGeminiGenerateContent({ prompt, systemInstruction = '', responseSchema = null }) {
+      const apiKey = getActiveGeminiApiKey();
+      const url = `${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`;
+
+      const payload = {
+        contents: [{
+          role: 'user',
+          parts: [{ text: prompt }]
+        }]
+      };
+
+      if (systemInstruction) {
+        payload.systemInstruction = {
+          parts: [{ text: systemInstruction }]
+        };
+      }
+
+      if (responseSchema) {
+        payload.generationConfig = {
+          responseMimeType: 'application/json',
+          responseSchema
+        };
+      }
+
+      const maxRetries = 3;
+      let lastError = null;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          recordGeminiRequest();
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok || data.error) {
+            const errMsg = data?.error?.message || `HTTP ${response.status} from Gemini API`;
+            if (response.status === 429 || response.status >= 500) {
+              lastError = new Error(errMsg);
+              await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+              continue;
+            }
+            throw new Error(errMsg);
+          }
+
+          const textOut = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!textOut) {
+            throw new Error('Empty response returned by Gemini.');
+          }
+
+          return textOut;
+        } catch (err) {
+          lastError = err;
+          if (attempt < maxRetries - 1 && /429|5\d\d|network|fetch/i.test(err.message || '')) {
+            await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+            continue;
+          }
+          throw lastError;
+        }
+      }
+
+      throw lastError || new Error('Gemini API request failed.');
+    }
+
+    async function testGeminiConnection() {
+      try {
+        const reply = await callGeminiGenerateContent({
+          prompt: 'Reply with a single word: Connected',
+          systemInstruction: 'Be concise.'
+        });
+        const cleanReply = reply.trim();
+        document.getElementById('last-api-call-info').textContent = `Gemini OK: "${cleanReply}"`;
+        showToast(`Gemini (${GEMINI_MODEL}) responded: "${cleanReply}"`, 'success');
+      } catch (err) {
+        document.getElementById('last-api-call-info').textContent = `Error: ${err.message}`;
+        showToast(`Gemini test failed: ${err.message}`, 'warning');
+      }
+    }
+
+    const INTERLINER_RESPONSE_SCHEMA = {
+      type: 'OBJECT',
+      properties: {
+        detectedLang: { type: 'STRING' },
+        fullSentenceTranslation: { type: 'STRING' },
+        tokens: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              word: { type: 'STRING' },
+              naturalEn: { type: 'STRING' },
+              literalEn: { type: 'STRING' },
+              pos: { type: 'STRING' },
+              note: { type: 'STRING' },
+              py: { type: 'STRING' },
+              bpmf: { type: 'STRING' },
+              wg: { type: 'STRING' },
+              xej: { type: 'STRING' },
+              m_ipa: { type: 'STRING' },
+              jyut: { type: 'STRING' },
+              yale: { type: 'STRING' },
+              c_ipa: { type: 'STRING' },
+              ts: { type: 'STRING' },
+              ts_ipa: { type: 'STRING' },
+              tl: { type: 'STRING' },
+              poj: { type: 'STRING' },
+              hk_ipa: { type: 'STRING' },
+              amoy: { type: 'STRING' },
+              am_ipa: { type: 'STRING' },
+              tc: { type: 'STRING' },
+              tc_ipa: { type: 'STRING' },
+              fz: { type: 'STRING' },
+              fz_ipa: { type: 'STRING' },
+              wu: { type: 'STRING' },
+              wu_ipa: { type: 'STRING' },
+              jin: { type: 'STRING' },
+              jin_ipa: { type: 'STRING' }
+            },
+            required: ['word', 'naturalEn', 'literalEn', 'pos', 'note', 'py']
+          }
+        },
+        grammarParagraphs: {
+          type: 'ARRAY',
+          items: { type: 'STRING' }
+        }
+      },
+      required: ['detectedLang', 'fullSentenceTranslation', 'tokens', 'grammarParagraphs']
+    };
+
+    async function buildLiveGeminiAnalysis(text, lang) {
+      const clean = text.trim();
+      const inputChars = countCodePoints(clean);
+
+      const systemInstruction = `You are an expert computational linguist and Sinitic dialectologist.
+Segment the user's input passage into word/morpheme tokens in source order so that joining naturalEn across tokens reconstructs a smooth, color-aligned English translation, while literalEn gives the literal word-for-word syntactic gloss in the source sentence's order.
+For Chinese (zh) text (or any Sinitic characters), fill all phonetic and IPA fields (py, bpmf, wg, xej, m_ipa, jyut, yale, c_ipa, ts, ts_ipa, tl, poj, hk_ipa, amoy, am_ipa, tc, tc_ipa, fz, fz_ipa, wu, wu_ipa, jin, jin_ipa) accurately. For non-Chinese languages, put syllabic/phonetic transcription in py and leave Chinese-specific fields empty.`;
+
+      const prompt = `Analyze this passage (language hint: "${lang}"):
+"""
+${clean}
+"""
+Return JSON matching the schema with 3 to 5 clear grammarParagraphs explaining word order, particles, aspect/case/morphology, and dialectal notes.`;
+
+      const rawJson = await callGeminiGenerateContent({
+        prompt,
+        systemInstruction,
+        responseSchema: INTERLINER_RESPONSE_SCHEMA
+      });
+
+      const parsed = JSON.parse(rawJson);
+      const rawTokens = Array.isArray(parsed.tokens) && parsed.tokens.length > 0 ? parsed.tokens : [];
+      const effectiveLang =
+        lang === 'auto'
+          ? (parsed.detectedLang && /^zh/i.test(parsed.detectedLang) ? 'zh' : (parsed.detectedLang || detectLanguage(clean)))
+          : lang;
+
+      const tokens = rawTokens.map((t) => {
+        const composed = effectiveLang === 'zh' ? composeCompoundPhonetics(t.word || '') : {};
+        return {
+          ...composed,
+          ...t,
+          word: t.word || '',
+          py: t.py || composed.py || '',
+          naturalEn: t.naturalEn || '',
+          literalEn: t.literalEn || t.naturalEn || '',
+          pos: t.pos || 'Token',
+          note: t.note || ''
+        };
+      });
+
+      const grammarParagraphs = Array.isArray(parsed.grammarParagraphs) && parsed.grammarParagraphs.length > 0
+        ? parsed.grammarParagraphs.map((p) => (/<p[\s>]|<strong/i.test(p) ? p : `<p>${escapeHtml(p)}</p>`))
+        : ['<p>Analyzed with Gemini.</p>'];
+
+      return {
+        lang: effectiveLang,
+        text: clean,
+        fullSentenceTranslation: parsed.fullSentenceTranslation || '',
+        sourceUsed: `Gemini (${GEMINI_MODEL})`,
+        charsConsumed: inputChars,
+        tokens,
+        grammarParagraphs
+      };
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    const DEFAULT_FLASHCARDS = [
+      {
+        id: 'fc-silk-road',
+        word: '丝绸之路',
+        lang: 'Chinese',
+        ...composeCompoundPhonetics('丝绸之路'),
+        py: 'Sīchóu zhī Lù',
+        bpmf: 'ㄙ ㄔㄡˊ ㄓ ㄌㄨˋ',
+        wg: 'Ssŭ¹-chʻou² chih¹ Lu⁴',
+        xej: 'سِ چِوْ جِ لُ',
+        m_ipa: '[sz̩˥.ʈʂʰoʊ̯˧˥.ʈʂʐ̩˥.lu˥˩]',
+        jyut: 'si1 cau4 zi1 lou6',
+        yale: 'sī chàuh jī louh',
+        c_ipa: '[siː˥.t͡sʰɐu̯˨˩.t͡siː˥.lou̯˨]',
+        ts: 'lhu1 ciu3 zi1 lu5',
+        ts_ipa: '[ɬu˧˧.t͡sʰiu˨˨.t͡si˧˧.lu˧˨]',
+        tl: 'Si-tiû tsi Lōo',
+        poj: 'Si-tiû chi Lō͘',
+        hk_ipa: '[ɕi˦˦.tiu̯˨˦.t͡ɕi˦˦.lɔ˨˨]',
+        amoy: 'Si-tiû chi Lō͘',
+        am_ipa: '[si˦˦.tiu̯˨˦.t͡ɕi˦˦.lɔ˨˨]',
+        tc: 'si1 tiu5 ze1 lou7',
+        tc_ipa: '[si˧˧.tʰiu̯˥˥.t͡sɯ˧˧.lou̯˩˩]',
+        fz: 'Sĭ-diù cĭ Diô',
+        fz_ipa: '[si˥˥.tiu̯˥˧.t͡si˥˥.tiɔ˨˦˨]',
+        wu: 'sy1 zeu6 tsy1 lu6',
+        wu_ipa: '[sz̩˥˧.zɤ˨˧.tsz̩˥˧.lu˨˧]',
+        jin: 'sz̩1 tʂʰəu1 tʂʐ̩1 lu3',
+        jin_ipa: '[sz̩˩˩.tʂʰəu̯˩˩.tʂʐ̩˩˩.lu˦˥]',
+        meaning: 'the Silk Road',
+        literal: 'silk [of] road',
+        pos: 'Proper Noun',
+        context: '古代丝绸之路连接了东方与西方文明。',
+        mastered: false
+      },
+      {
+        id: 'fc-tea-house',
+        word: '茶馆里',
+        lang: 'Chinese',
+        ...composeCompoundPhonetics('茶馆里'),
+        py: 'cháguǎn lǐ',
+        bpmf: 'ㄔㄚˊ ㄍㄨㄢˇ ㄌㄧˇ',
+        wg: 'chʻa²-kuan³ li³',
+        xej: 'چَا قُوًا لِ',
+        m_ipa: '[ʈʂʰä˧˥.kwän˨˩˦.li˨˩˦]',
+        jyut: 'caa4 gun2 leoi5',
+        yale: 'chàh gún léuih',
+        c_ipa: '[t͡sʰaː˨˩.kuːn˧˥.lɵy̯˩˧]',
+        ts: 'ca3 gon2 lui2',
+        ts_ipa: '[t͡sʰa˨˨.kɔn˥˥.lui̯˥˥]',
+        tl: 'tê-kuán lí',
+        poj: 'tê-koán lí',
+        hk_ipa: '[te˨˦.kuan˥˧.li˥˧]',
+        amoy: 'tê-koán lí',
+        am_ipa: '[te˨˦.kuan˥˧.li˥˧]',
+        tc: 'dê5 guang2 lai6',
+        tc_ipa: '[te˥˥.kuaŋ˥˨.lai̯˧˥]',
+        fz: 'dà-guāng diē',
+        fz_ipa: '[ta˥˧.kuaŋ˧˧.tie˧˧]',
+        wu: 'zo6 koe5 li6',
+        wu_ipa: '[zo˨˧.kø˧˦.li˨˧]',
+        jin: 'tʂʰa1 kuæ2 li2',
+        jin_ipa: '[tʂʰa˩˩.kuæ˥˧.li˥˧]',
+        meaning: 'inside the teahouse',
+        literal: 'tea-house inside',
+        pos: 'Noun + Localizer',
+        context: '今天下雨，我们在茶馆里喝热茶聊天。',
+        mastered: false
+      },
+      {
+        id: 'fc-prague-loc',
+        word: 'Praze',
+        lang: 'Czech',
+        py: 'Pra-ze',
+        meaning: 'in Prague',
+        literal: 'Prague.LOC.SG',
+        pos: 'Proper Noun (Locative)',
+        context: 'Ráno v Praze pijeme silnou kávu a čteme noviny.',
+        mastered: false
+      },
+      {
+        id: 'fc-kyoto-gen',
+        word: '京都の',
+        lang: 'Japanese',
+        py: 'Kyōto no',
+        meaning: "Kyoto's",
+        literal: 'Kyoto [GEN]',
+        pos: 'Proper Noun + の',
+        context: '秋に京都の古いお寺を見に行きました。',
+        mastered: false
+      }
+    ];
+
+    let flashcards = [];
+    let currentCardIdx = 0;
+    let isCardFlipped = false;
+
+    function loadFlashcardsFromStorage() {
+      try {
+        const saved = localStorage.getItem('lexilens_flashcards_v2');
+        if (saved) {
+          flashcards = JSON.parse(saved);
+        } else {
+          flashcards = [...DEFAULT_FLASHCARDS];
+          saveFlashcardsToStorage();
+        }
+      } catch (e) {
+        flashcards = [...DEFAULT_FLASHCARDS];
+      }
+      updateFlashcardBadge();
+    }
+
+    function saveFlashcardsToStorage() {
+      try {
+        localStorage.setItem('lexilens_flashcards_v2', JSON.stringify(flashcards));
+      } catch (e) {
+        console.warn('Storage unavailable', e);
+      }
+      updateFlashcardBadge();
+    }
+
+    function updateFlashcardBadge() {
+      const badge = document.getElementById('flashcard-badge');
+      if (badge) badge.textContent = flashcards.length;
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. TOAST NOTIFICATION UTILITY
+    // -------------------------------------------------------------------------
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-900 text-emerald-50 border-emerald-700',
+        info: 'bg-slate-900 text-white border-slate-700',
+        warning: 'bg-amber-900 text-amber-50 border-amber-700'
+      };
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2.5 transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-emerald-400' : 'bg-indigo-400'}"></span>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. TAB NAVIGATION
+    // -------------------------------------------------------------------------
+    function switchTab(tabName) {
+      const tabs = ['analyzer', 'flashcards', 'comparator', 'dictionaries'];
+      tabs.forEach((t) => {
+        const panel = document.getElementById(`panel-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabName) {
+          panel.classList.remove('hidden');
+          btn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm', 'font-semibold');
+          btn.classList.remove('text-slate-600', 'font-medium');
+          btn.setAttribute('aria-selected', 'true');
+        } else {
+          panel.classList.add('hidden');
+          btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm', 'font-semibold');
+          btn.classList.add('text-slate-600', 'font-medium');
+          btn.setAttribute('aria-selected', 'false');
+        }
+      });
+
+      if (tabName === 'flashcards') {
+        renderFlashcardStage();
+        renderFlashcardsInventory();
+      } else if (tabName === 'dictionaries') {
+        renderDictionaryHub();
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. TEXT ANALYZER ENGINE (PRESETS + MULTI-DIALECT FALLBACK SEGMENTATION)
+    // -------------------------------------------------------------------------
+    function loadAnalyzerPreset(key) {
+      const preset = ANALYZER_PRESETS[key];
+      if (!preset) return;
+      document.getElementById('source-text-input').value = preset.text;
+      document.getElementById('language-select').value = preset.lang;
+      handleLanguageChange();
+      currentAnalysis = JSON.parse(JSON.stringify(preset));
+      selectedTokenIndex = 0;
+      renderAnalysis();
+      if (preset.lang === 'zh') {
+        const convInput = document.getElementById('simp-trad-input');
+        if (convInput) {
+          convInput.value = preset.text;
+          runAutoSimpTradTranslation();
+        }
+      }
+      showToast('Loaded curated linguistic passage', 'info');
+    }
+
+    function detectLanguage(text) {
+      if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return 'ja';
+      if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
+      if (/[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/.test(text)) return 'cs';
+      return 'zh';
+    }
+
+    function handleLanguageChange() {
+      const langSelect = document.getElementById('language-select').value;
+      const text = document.getElementById('source-text-input').value;
+      const effectiveLang = langSelect === 'auto' ? detectLanguage(text) : langSelect;
+      const wrapper = document.getElementById('phonetic-selector-wrapper');
+      if (effectiveLang === 'zh') {
+        wrapper.classList.remove('opacity-40', 'pointer-events-none');
+      } else {
+        wrapper.classList.add('opacity-40', 'pointer-events-none');
+      }
+    }
+
+    function buildDynamicAnalysis(text, lang) {
+      const clean = text.trim();
+      for (const key of Object.keys(ANALYZER_PRESETS)) {
+        if (ANALYZER_PRESETS[key].text === clean) {
+          return JSON.parse(JSON.stringify(ANALYZER_PRESETS[key]));
+        }
+      }
+
+      if (lang === 'zh') {
+        const tokens = [];
+        let i = 0;
+        while (i < clean.length) {
+          const ch = clean[i];
+          if (/[\s，。！？、；：“”‘’（）]/.test(ch)) {
+            if (tokens.length > 0 && !/^\s+$/.test(ch)) {
+              tokens[tokens.length - 1].word += ch;
+              tokens[tokens.length - 1].naturalEn += ch;
+            }
+            i++;
+            continue;
+          }
+
+          const twoChar = clean.slice(i, i + 2);
+          if (twoChar.length === 2 && CHAR_DICT[twoChar[0]] && CHAR_DICT[twoChar[1]]) {
+            const c1 = CHAR_DICT[twoChar[0]];
+            const c2 = CHAR_DICT[twoChar[1]];
+            const comp = composeCompoundPhonetics(twoChar);
+            tokens.push({
+              word: twoChar,
+              ...comp,
+              naturalEn: `${c1.en} ${c2.en}`,
+              literalEn: `${c1.en}-${c2.en}`,
+              pos: c2.pos,
+              note: `Compound "${twoChar}" synthesized from "${twoChar[0]}" (${c1.en}) + "${twoChar[1]}" (${c2.en}) across all 9 Sinitic varieties.`
+            });
+            i += 2;
+          } else if (CHAR_DICT[ch]) {
+            const entry = CHAR_DICT[ch];
+            tokens.push({
+              word: ch,
+              ...entry,
+              m_ipa: `[${entry.m_ipa}]`,
+              c_ipa: `[${entry.c_ipa}]`,
+              ts_ipa: `[${entry.ts_ipa}]`,
+              hk_ipa: `[${entry.hk_ipa}]`,
+              am_ipa: `[${entry.am_ipa}]`,
+              tc_ipa: `[${entry.tc_ipa}]`,
+              fz_ipa: `[${entry.fz_ipa}]`,
+              wu_ipa: `[${entry.wu_ipa}]`,
+              jin_ipa: `[${entry.jin_ipa}]`,
+              naturalEn: entry.en,
+              literalEn: entry.en,
+              pos: entry.pos,
+              note: `Character "${ch}" carries the core meaning "${entry.en}" (${entry.pos}). Use the Word Inspector dictionary links for full dialectal entries.`
+            });
+            i += 1;
+          } else {
+            tokens.push({
+              word: ch,
+              py: 'zì', bpmf: 'ㄗˋ', wg: 'tzŭ⁴', xej: 'زِ', m_ipa: '[tsʐ̩˥˩]',
+              jyut: 'zi6', yale: 'jih', c_ipa: '[t͡siː˨]',
+              ts: 'zi5', ts_ipa: '[t͡si˧˨]',
+              tl: 'jī', poj: 'jī', hk_ipa: '[d͡ʑi˨˨]',
+              amoy: 'jī', am_ipa: '[d͡zi˨˨]',
+              tc: 'ri7', tc_ipa: '[zi˩˩]',
+              fz: 'cê', fz_ipa: '[t͡sei̯˨˦˨]',
+              wu: 'zy6', wu_ipa: '[zz̩˨˧]',
+              jin: 't͡sz̩3', jin_ipa: '[t͡sz̩˦˥]',
+              naturalEn: `[${ch}]`,
+              literalEn: `[${ch}]`,
+              pos: 'Morpheme',
+              note: `Character "${ch}". Click any dictionary link in the inspector below to look up its dialectal pronunciation in ChhoeTaigi, CC-Canto, TaishanDict, Mogher, SeeDict, Wugniu, or Xiaoxuetang Jinyu.`
+            });
+            i += 1;
+          }
+        }
+
+        return {
+          lang: 'zh',
+          text: clean,
+          tokens,
+          grammarParagraphs: [
+            '<strong>1. Analytic Isolating Structure:</strong> Sinitic languages share an analytic syntactic core—words do not inflect for tense or plural, relying instead on word order (SVO) and aspect/modal particles.',
+            '<strong>2. Cross-Dialectal Phonological Mapping:</strong> Use the <em>Dialect &amp; Phonetics</em> dropdown above to compare Pinyin, Bopomofo, Wade-Giles, Xiao\'erjing, Jyutping, Taishanese, Tâi-lô/POJ, Amoy POJ, Teochew Peng\'im, Fuzhou Bàng-uâ-cê, Wugniu, Jin, and IPA.',
+            '<strong>3. Dictionary &amp; Flashcard Workflow:</strong> Select any word to inspect its full cross-dialect matrix, open dictionary lookups, or save it to your Flashcards deck.'
+          ]
+        };
+      }
+
+      const words = clean.split(/\s+/);
+      return {
+        lang,
+        text: clean,
+        tokens: words.map((w) => ({
+          word: w,
+          py: w,
+          naturalEn: w,
+          literalEn: w,
+          pos: 'Word',
+          note: `Token "${w}" in ${lang === 'cs' ? 'Czech' : 'Japanese'} context.`
+        })),
+        grammarParagraphs: [
+          '<strong>1. Structural Overview:</strong> Each colored segment shows how the source token maps to its grammatical role and literal gloss.',
+          '<strong>2. Word-by-Word Alignment:</strong> Compare Layer 3 (literal source order) against Layer 2 (natural English rendering).'
+        ]
+      };
+    }
+
+    async function analyzeCurrentText() {
+      const text = document.getElementById('source-text-input').value.trim();
+      if (!text) {
+        showToast('Please paste or enter text to analyze.', 'warning');
+        return;
+      }
+
+      const langSelect = document.getElementById('language-select').value;
+      const effectiveLang = langSelect === 'auto' ? detectLanguage(text) : langSelect;
+      handleLanguageChange();
+
+      const btnLabel = document.getElementById('analyze-btn-label');
+      const actionBtn = document.getElementById('analyze-action-btn');
+
+      if (translationMode === 'live') {
+        try {
+          if (btnLabel) btnLabel.textContent = 'Analyzing with Gemini...';
+          if (actionBtn) actionBtn.disabled = true;
+
+          currentAnalysis = await buildLiveGeminiAnalysis(text, langSelect);
+          selectedTokenIndex = 0;
+          renderAnalysis();
+          document.getElementById('last-api-call-info').textContent =
+            `Gemini (${GEMINI_MODEL}) · ${currentAnalysis.tokens.length} tokens`;
+          showToast(`Analyzed with Gemini (${currentAnalysis.tokens.length} tokens).`, 'success');
+          return;
+        } catch (err) {
+          showToast(`Gemini API error (${err.message}). Using offline lexicon fallback.`, 'warning');
+          document.getElementById('last-api-call-info').textContent = `Fallback used: ${err.message}`;
+        } finally {
+          if (btnLabel) btnLabel.textContent = 'Analyze & Gloss Text';
+          if (actionBtn) actionBtn.disabled = false;
+        }
+      }
+
+      currentAnalysis = buildDynamicAnalysis(text, effectiveLang);
+      selectedTokenIndex = 0;
+      renderAnalysis();
+      showToast('Interlinear analysis updated (Offline lexicon mode).', 'success');
+    }
+
+    const PHONETIC_FIELD_MAP = {
+      pinyin: 'py',
+      bopomofo: 'bpmf',
+      wadegiles: 'wg',
+      xiaoerjing: 'xej',
+      mandarin_ipa: 'm_ipa',
+      jyutping: 'jyut',
+      cantonese_yale: 'yale',
+      cantonese_ipa: 'c_ipa',
+      taishanese_rom: 'ts',
+      taishanese_ipa: 'ts_ipa',
+      tailo: 'tl',
+      poj: 'poj',
+      hokkien_ipa: 'hk_ipa',
+      amoy_poj: 'amoy',
+      amoy_ipa: 'am_ipa',
+      teochew_pengim: 'tc',
+      teochew_ipa: 'tc_ipa',
+      fuzhou_buc: 'fz',
+      fuzhou_ipa: 'fz_ipa',
+      wugniu: 'wu',
+      wu_ipa: 'wu_ipa',
+      jinyu_rom: 'jin',
+      jinyu_ipa: 'jin_ipa'
+    };
+
+    function getPhoneticForToken(token, scriptSystem) {
+      if (!token) return '';
+      const field = PHONETIC_FIELD_MAP[scriptSystem] || 'py';
+      return token[field] || token.py || '';
+    }
+
+    function renderAnalysis() {
+      if (!currentAnalysis) return;
+      const selectEl = document.getElementById('phonetic-system');
+      const scriptSystem = selectEl.value;
+      const selectedOptionLabel = selectEl.options[selectEl.selectedIndex]?.text || 'Mandarin — Pinyin';
+
+      document.getElementById('active-script-label').textContent =
+        currentAnalysis.lang === 'zh' ? selectedOptionLabel : 'Syllabic / Phonetic';
+
+      const rubyContainer = document.getElementById('layer-ruby-container');
+      const naturalContainer = document.getElementById('layer-natural-container');
+      const literalContainer = document.getElementById('layer-literal-container');
+      const grammarContainer = document.getElementById('grammar-explanation-container');
+
+      rubyContainer.innerHTML = '';
+      naturalContainer.innerHTML = '';
+      literalContainer.innerHTML = '';
+
+      if (currentAnalysis.fullSentenceTranslation) {
+        const banner = document.createElement('div');
+        banner.className = 'w-full mb-2 pb-2 border-b border-slate-100 text-sm font-semibold text-slate-900';
+        banner.innerHTML = `<span class="text-[11px] uppercase tracking-wider font-bold text-indigo-600 mr-2">Full Translation:</span>${escapeHtml(currentAnalysis.fullSentenceTranslation)}`;
+        naturalContainer.appendChild(banner);
+      }
+
+      currentAnalysis.tokens.forEach((tok, idx) => {
+        const color = TOKEN_PALETTE[idx % TOKEN_PALETTE.length];
+        const isSelected = idx === selectedTokenIndex;
+        const phoneticText = currentAnalysis.lang === 'zh'
+          ? getPhoneticForToken(tok, scriptSystem)
+          : tok.py;
+        const isXiaoerjing = currentAnalysis.lang === 'zh' && scriptSystem === 'xiaoerjing';
+
+        const wordBtn = document.createElement('button');
+        wordBtn.type = 'button';
+        wordBtn.onclick = () => selectToken(idx);
+        wordBtn.style.color = color.text;
+        wordBtn.style.backgroundColor = isSelected ? color.badgeBg : color.bg;
+        wordBtn.style.borderColor = isSelected ? color.text : color.border;
+        wordBtn.className = `px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer hover:scale-[1.03] focus:outline-none ${
+          isSelected ? 'ring-2 ring-offset-1 shadow-sm' : ''
+        }`;
+        if (isSelected) {
+          wordBtn.style.setProperty('--tw-ring-color', color.text);
+        }
+
+        wordBtn.innerHTML = `
+          <ruby>
+            <span>${tok.word}</span>
+            <rt class="${isXiaoerjing ? 'rt-xiaoerjing' : ''}" style="color: ${color.text};">${phoneticText}</rt>
+          </ruby>
+        `;
+        rubyContainer.appendChild(wordBtn);
+
+        const natSpan = document.createElement('button');
+        natSpan.type = 'button';
+        natSpan.onclick = () => selectToken(idx);
+        natSpan.style.color = color.text;
+        natSpan.style.backgroundColor = isSelected ? color.badgeBg : color.bg;
+        natSpan.style.borderColor = isSelected ? color.text : 'transparent';
+        natSpan.className = `px-2 py-0.5 rounded-lg border font-medium transition cursor-pointer hover:opacity-85`;
+        natSpan.textContent = tok.naturalEn;
+        naturalContainer.appendChild(natSpan);
+
+        const litCard = document.createElement('button');
+        litCard.type = 'button';
+        litCard.onclick = () => selectToken(idx);
+        litCard.style.backgroundColor = isSelected ? color.badgeBg : color.bg;
+        litCard.style.borderColor = isSelected ? color.text : color.border;
+        litCard.className = `px-3 py-2 rounded-xl border text-left transition cursor-pointer hover:shadow-sm flex flex-col gap-0.5`;
+        litCard.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm font-bold font-cjk" style="color: ${color.text};">${tok.word}</span>
+            <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-white/80 text-slate-600 border border-slate-200/60">${tok.pos}</span>
+          </div>
+          <div class="text-xs font-semibold text-slate-800">"${tok.literalEn}"</div>
+        `;
+        literalContainer.appendChild(litCard);
+      });
+
+      grammarContainer.innerHTML = currentAnalysis.grammarParagraphs
+        .map((p) => `<p class="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100">${p}</p>`)
+        .join('');
+
+      renderWordInspector();
+    }
+
+    function selectToken(idx) {
+      selectedTokenIndex = idx;
+      renderAnalysis();
+    }
+
+    function renderWordInspector() {
+      const body = document.getElementById('word-inspector-body');
+      const posBadge = document.getElementById('inspector-pos-badge');
+      if (!currentAnalysis || !currentAnalysis.tokens[selectedTokenIndex]) {
+        body.innerHTML = `<p class="text-sm text-slate-500">Click any word in the interlinear viewer to inspect all Chinese dialect romanizations, IPA, and save to flashcards.</p>`;
+        return;
+      }
+
+      const tok = currentAnalysis.tokens[selectedTokenIndex];
+      const color = TOKEN_PALETTE[selectedTokenIndex % TOKEN_PALETTE.length];
+      posBadge.textContent = tok.pos;
+
+      const cleanQuery = tok.word.replace(/[，。！？、；：“”‘’（）.,!?]/g, '');
+
+      const isAlreadySaved = flashcards.some(
+        (fc) => fc.word === tok.word && fc.meaning === tok.naturalEn
+      );
+
+      const dialectTableHtml = currentAnalysis.lang === 'zh'
+        ? `
+          <div class="space-y-2">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Cross-Dialect Romanization &amp; IPA Matrix</div>
+            <div class="rounded-xl border border-slate-200/90 overflow-hidden text-xs divide-y divide-slate-100">
+              <div class="p-2.5 bg-slate-50/70 flex justify-between items-start gap-2">
+                <span class="font-bold text-slate-700 shrink-0">Mandarin</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.py} · ${tok.bpmf}</div>
+                  <div class="text-[11px] text-slate-500">${tok.wg} · <span class="font-arabic">${tok.xej}</span> · <span class="font-mono text-indigo-700">${tok.m_ipa}</span></div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-white flex justify-between items-start gap-2">
+                <span class="font-bold text-amber-800 shrink-0">Cantonese</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.jyut} <span class="text-slate-400 font-normal">(${tok.yale})</span></div>
+                  <div class="text-[11px] font-mono text-amber-700">${tok.c_ipa}</div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-slate-50/70 flex justify-between items-start gap-2">
+                <span class="font-bold text-orange-800 shrink-0">Taishanese</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.ts}</div>
+                  <div class="text-[11px] font-mono text-orange-700">${tok.ts_ipa}</div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-white flex justify-between items-start gap-2">
+                <span class="font-bold text-emerald-800 shrink-0">Taiwanese</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.tl} <span class="text-slate-400 font-normal">(POJ: ${tok.poj})</span></div>
+                  <div class="text-[11px] font-mono text-emerald-700">${tok.hk_ipa}</div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-slate-50/70 flex justify-between items-start gap-2">
+                <span class="font-bold text-teal-800 shrink-0">Amoy</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.amoy}</div>
+                  <div class="text-[11px] font-mono text-teal-700">${tok.am_ipa}</div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-white flex justify-between items-start gap-2">
+                <span class="font-bold text-cyan-800 shrink-0">Teochew</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.tc}</div>
+                  <div class="text-[11px] font-mono text-cyan-700">${tok.tc_ipa}</div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-slate-50/70 flex justify-between items-start gap-2">
+                <span class="font-bold text-sky-800 shrink-0">Fuzhou</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.fz}</div>
+                  <div class="text-[11px] font-mono text-sky-700">${tok.fz_ipa}</div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-white flex justify-between items-start gap-2">
+                <span class="font-bold text-violet-800 shrink-0">Wu (Shanghai)</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.wu}</div>
+                  <div class="text-[11px] font-mono text-violet-700">${tok.wu_ipa}</div>
+                </div>
+              </div>
+              <div class="p-2.5 bg-slate-50/70 flex justify-between items-start gap-2">
+                <span class="font-bold text-rose-800 shrink-0">Jin (Taiyuan)</span>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900">${tok.jin}</div>
+                  <div class="text-[11px] font-mono text-rose-700">${tok.jin_ipa}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Lookup "${cleanQuery}" in Dialect Dictionaries</div>
+            <div class="flex flex-wrap gap-1.5">
+              ${DIALECT_DICTIONARIES.map(
+                (d) => `
+                <a href="${d.searchUrl(cleanQuery)}" target="_blank" rel="noopener noreferrer"
+                  class="text-[11px] font-semibold px-2 py-1 rounded-lg border transition hover:opacity-80 ${d.badge}">
+                  ${d.name.split(' ')[0]} ↗
+                </a>
+              `
+              ).join('')}
+            </div>
+          </div>
+        `
+        : `
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="text-[10px] font-bold uppercase text-slate-400">Syllabic / Phonetic Guide</div>
+            <div class="text-sm font-bold text-slate-800 mt-0.5">${tok.py}</div>
+          </div>
+        `;
+
+      body.innerHTML = `
+        <div class="p-3.5 rounded-2xl border text-center space-y-1" style="background-color: ${color.bg}; border-color: ${color.border};">
+          <div class="text-3xl font-bold font-cjk" style="color: ${color.text};">${tok.word}</div>
+          <div class="text-sm font-semibold text-slate-700">${tok.naturalEn} <span class="text-slate-400 font-normal">· "${tok.literalEn}"</span></div>
+        </div>
+
+        <button onclick="saveSelectedWordToFlashcards()"
+          class="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm ${
+            isAlreadySaved
+              ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+              : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20'
+          }">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="${
+              isAlreadySaved
+                ? 'M5 13l4 4L19 7'
+                : 'M12 4v16m8-8H4'
+            }" />
+          </svg>
+          <span>${isAlreadySaved ? 'Saved in Flashcards (Save Again)' : 'Save Word to Flashcards'}</span>
+        </button>
+
+        ${dialectTableHtml}
+
+        <div class="space-y-1.5">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Contextual Grammar Role</div>
+          <p class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+            ${tok.note}
+          </p>
+        </div>
+      `;
+    }
+
+    function saveSelectedWordToFlashcards() {
+      if (!currentAnalysis || !currentAnalysis.tokens[selectedTokenIndex]) return;
+      const tok = currentAnalysis.tokens[selectedTokenIndex];
+      const langNames = { zh: 'Chinese', cs: 'Czech', ja: 'Japanese' };
+
+      const newCard = {
+        id: 'fc-' + Date.now(),
+        word: tok.word,
+        lang: langNames[currentAnalysis.lang] || 'Language',
+        ...tok,
+        meaning: tok.naturalEn,
+        literal: tok.literalEn,
+        pos: tok.pos,
+        context: currentAnalysis.text,
+        mastered: false
+      };
+
+      flashcards.unshift(newCard);
+      currentCardIdx = 0;
+      isCardFlipped = false;
+      saveFlashcardsToStorage();
+      renderWordInspector();
+      showToast(`Saved "${tok.word}" to Flashcards!`, 'success');
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. FLASHCARDS DECK LOGIC
+    // -------------------------------------------------------------------------
+    function renderFlashcardStage() {
+      const stageWrapper = document.getElementById('flashcard-stage-wrapper');
+      const masteredCount = flashcards.filter((c) => c.mastered).length;
+      document.getElementById('mastered-count').textContent = masteredCount;
+      document.getElementById('total-cards-count').textContent = flashcards.length;
+
+      if (flashcards.length === 0) {
+        stageWrapper.innerHTML = `
+          <div class="bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-4">
+            <p class="text-slate-600 font-medium">Your flashcard deck is empty. Click any word in the Text Analyzer to add cards!</p>
+            <button onclick="resetDefaultFlashcards()" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Restore Starter Deck</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (currentCardIdx >= flashcards.length) currentCardIdx = 0;
+      if (currentCardIdx < 0) currentCardIdx = flashcards.length - 1;
+
+      const card = flashcards[currentCardIdx];
+      const showFrontPhonetic = document.getElementById('toggle-front-phonetic').checked;
+      const scriptSystem = document.getElementById('phonetic-system').value;
+
+      const inner = document.getElementById('flashcard-inner');
+      if (isCardFlipped) {
+        inner.classList.add('rotate-y-180');
+      } else {
+        inner.classList.remove('rotate-y-180');
+      }
+
+      document.getElementById('fc-front-lang').textContent = card.lang;
+      document.getElementById('fc-card-index').textContent = `Card ${currentCardIdx + 1} of ${flashcards.length}`;
+      document.getElementById('fc-front-word').textContent = card.word;
+
+      const isChineseCard = card.lang === 'Chinese' || card.lang === 'Mandarin';
+      const frontPhonetic = isChineseCard
+        ? getPhoneticForToken(card, scriptSystem)
+        : card.py;
+      const frontPhoneticEl = document.getElementById('fc-front-phonetic');
+      frontPhoneticEl.textContent = showFrontPhonetic ? frontPhonetic : '•••';
+      frontPhoneticEl.className = `text-lg sm:text-xl font-semibold text-indigo-600 ${
+        isChineseCard && scriptSystem === 'xiaoerjing' && showFrontPhonetic ? 'font-arabic text-2xl' : ''
+      }`;
+
+      document.getElementById('fc-back-pos').textContent = card.pos;
+      document.getElementById('fc-back-meaning').textContent = card.meaning;
+      document.getElementById('fc-back-literal').textContent = card.literal;
+      document.getElementById('fc-back-context').textContent = card.context;
+
+      if (isChineseCard) {
+        document.getElementById('fc-back-phonetic-all').textContent =
+          `Mandarin: ${card.py} · Cantonese: ${card.jyut || '—'} · Hokkien: ${card.tl || '—'} · Wu: ${card.wu || '—'}`;
+      } else {
+        document.getElementById('fc-back-phonetic-all').textContent = card.py;
+      }
+
+      const masteredBadge = document.getElementById('fc-back-mastered-badge');
+      const btnMastered = document.getElementById('btn-toggle-mastered');
+      if (card.mastered) {
+        masteredBadge.classList.remove('hidden');
+        btnMastered.innerHTML = `<span>✓ Mastered (Undo)</span>`;
+      } else {
+        masteredBadge.classList.add('hidden');
+        btnMastered.innerHTML = `<span>Mark Mastered</span>`;
+      }
+    }
+
+    function flipFlashcard() {
+      isCardFlipped = !isCardFlipped;
+      renderFlashcardStage();
+    }
+
+    function nextFlashcard() {
+      if (flashcards.length === 0) return;
+      isCardFlipped = false;
+      currentCardIdx = (currentCardIdx + 1) % flashcards.length;
+      renderFlashcardStage();
+    }
+
+    function prevFlashcard() {
+      if (flashcards.length === 0) return;
+      isCardFlipped = false;
+      currentCardIdx = (currentCardIdx - 1 + flashcards.length) % flashcards.length;
+      renderFlashcardStage();
+    }
+
+    function shuffleFlashcards() {
+      for (let i = flashcards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+      }
+      currentCardIdx = 0;
+      isCardFlipped = false;
+      saveFlashcardsToStorage();
+      renderFlashcardStage();
+      renderFlashcardsInventory();
+      showToast('Deck shuffled!', 'info');
+    }
+
+    function toggleMasteredCurrentCard() {
+      if (flashcards.length === 0) return;
+      flashcards[currentCardIdx].mastered = !flashcards[currentCardIdx].mastered;
+      saveFlashcardsToStorage();
+      renderFlashcardStage();
+      renderFlashcardsInventory();
+    }
+
+    function deleteCurrentFlashcard() {
+      if (flashcards.length === 0) return;
+      const removed = flashcards.splice(currentCardIdx, 1)[0];
+      if (currentCardIdx >= flashcards.length) currentCardIdx = Math.max(0, flashcards.length - 1);
+      isCardFlipped = false;
+      saveFlashcardsToStorage();
+      renderFlashcardStage();
+      renderFlashcardsInventory();
+      showToast(`Removed "${removed.word}" from deck`, 'info');
+    }
+
+    function resetDefaultFlashcards() {
+      flashcards = [...DEFAULT_FLASHCARDS];
+      currentCardIdx = 0;
+      isCardFlipped = false;
+      saveFlashcardsToStorage();
+      renderFlashcardStage();
+      renderFlashcardsInventory();
+      showToast('Starter flashcards restored', 'success');
+    }
+
+    function renderFlashcardsInventory() {
+      const grid = document.getElementById('flashcards-grid-list');
+      if (!grid) return;
+      const scriptSystem = document.getElementById('phonetic-system').value;
+      grid.innerHTML = flashcards
+        .map((card, idx) => {
+          const isChineseCard = card.lang === 'Chinese' || card.lang === 'Mandarin';
+          const reading = isChineseCard ? getPhoneticForToken(card, scriptSystem) : card.py;
+          return `
+            <div onclick="selectDeckCard(${idx})"
+              class="p-4 rounded-xl border transition cursor-pointer hover:shadow-md flex flex-col justify-between gap-2 ${
+                idx === currentCardIdx
+                  ? 'bg-indigo-50/70 border-indigo-300 ring-1 ring-indigo-300'
+                  : 'bg-slate-50/70 border-slate-200/80 hover:bg-white'
+              }">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="text-lg font-bold font-cjk text-slate-900">${card.word}</div>
+                  <div class="text-xs font-semibold text-indigo-600">${reading}</div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  card.mastered ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200/80 text-slate-600'
+                }">${card.mastered ? 'Mastered' : card.lang}</span>
+              </div>
+              <div class="text-xs font-medium text-slate-700">${card.meaning}</div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function selectDeckCard(idx) {
+      currentCardIdx = idx;
+      isCardFlipped = false;
+      renderFlashcardStage();
+      renderFlashcardsInventory();
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. LANGUAGE COMPARATOR ENGINE
+    // -------------------------------------------------------------------------
+    const COMPARATOR_PRESETS = {
+      cs_sk: {
+        langA: 'Czech (Čeština)',
+        langB: 'Slovak (Slovenčina)',
+        textA: 'Včera jsme mluvili o tom, proč je důležité učit se cizí jazyky. V Praze na jaře kvetou stromy a lidé rádi sedí v kavárně.',
+        textB: 'Včera sme hovorili o tom, prečo je dôležité učiť sa cudzie jazyky. V Bratislave na jar kvitnú stromy a ľudia radi sedia v kaviarni.',
+        explanations: [
+          {
+            title: '1. Auxiliary Verb & Reflexive Pronoun Shifts (jsme → sme, se → sa)',
+            body: 'In the past tense 1st-person plural, Czech retains the historical initial <em>j-</em> in <strong>jsme</strong> ("we are/did"), whereas Slovak simplifies it to <strong>sme</strong>. Similarly, the reflexive particle appears as <strong>se</strong> in Czech (<em>učit se</em>) versus <strong>sa</strong> in Slovak (<em>učiť sa</em>).'
+          },
+          {
+            title: '2. Systematic Phonological & Orthographic Divergences (ů → ô, ř → r, cizí → cudzie)',
+            body: 'Notice <strong>důležité</strong> (Czech) vs. <strong>dôležité</strong> (Slovak): historical long <em>ó</em> evolved into <em>ů</em> [uː] in Czech, while Slovak developed the rising diphthong <strong>ô</strong> [u̯o]. Meanwhile, Czech possesses the unique alveolar trill fricative <strong>ř</strong> (<em>na jaře</em>, <em>kavárně</em>), whereas Slovak uses plain <strong>r</strong> (<em>na jar</em>, <em>v kaviarni</em>) and soft <strong>ľ</strong> (<em>ľudia</em> vs. Czech <em>lidé</em>).'
+          },
+          {
+            title: '3. Lexical & Morphological Contrast (mluvit vs. hovoriť, proč vs. prečo)',
+            body: 'Czech uses <strong>mluvit</strong> for "to speak", while Slovak uses <strong>hovoriť</strong> (in Czech, <em>hovořit</em> sounds more formal). Likewise, "why" is <strong>proč</strong> in Czech versus <strong>prečo</strong> in Slovak, and infinitive endings differ systematically: Czech <strong>-t</strong> (<em>učit</em>) vs. Slovak <strong>-ť</strong> (<em>učiť</em>).'
+          }
+        ]
+      },
+      es_pt: {
+        langA: 'Spanish (Español)',
+        langB: 'Portuguese (Português)',
+        textA: 'Mañana por la mañana vamos a tomar un café caliente antes de caminar por el parque.',
+        textB: 'Amanhã de manhã vamos tomar um café quente antes de caminhar pelo parque.',
+        explanations: [
+          {
+            title: '1. Nasal Vowels vs. Palatal Nasals (mañana → manhã)',
+            body: 'Both derive from Latin <em>*maneana</em>. Spanish preserved the palatal nasal <strong>ñ</strong> (<em>mañana</em>), whereas Portuguese lost the intervocalic <em>-n-</em> and nasalized the final vowel into <strong>-ã</strong> (<em>manhã</em>).'
+          },
+          {
+            title: '2. Future Periphrasis & Prepositional Contractions (por el → pelo)',
+            body: 'Spanish links "ir + a + infinitive" (<em>vamos <strong>a</strong> tomar</em>), while Portuguese omits the preposition <em>a</em> (<em>vamos tomar</em>). Furthermore, Portuguese contracts prepositions with definite articles: <em>por + o</em> becomes <strong>pelo</strong> (vs. Spanish <em>por el</em>).'
+          },
+          {
+            title: '3. Consonant Cluster Evolution (caliente → quente, caminar → caminhar)',
+            body: 'Spanish diphthongized Latin short <em>e</em> into <em>ie</em> (<em>caliente</em>), whereas Portuguese dropped the intervocalic <em>-l-</em> (<em>calente → quente</em>). Orthographically, Spanish <strong>ñ</strong> corresponds to Portuguese <strong>nh</strong> (<em>caminar / caminhar</em>).'
+          }
+        ]
+      },
+      zh_simp_trad: {
+        langA: 'Simplified Chinese (简体中文)',
+        langB: 'Traditional Chinese (繁體中文)',
+        textA: '学习语言不仅能拓宽我们的视野，还能让我们深入了解不同国家的文化与历史。',
+        textB: '學習語言不僅能拓寬我們的視野，還能讓我們深入了解不同國家的文化與歷史。',
+        explanations: [
+          {
+            title: '1. Component Radical Simplification (言 → 讠)',
+            body: 'In Traditional Chinese, the speech radical retains all 7 strokes in <strong>語言</strong> (yǔyán) and <strong>讓</strong> (ràng). In Simplified Chinese, this radical is streamlined to 2 strokes (<strong>讠</strong>) in <strong>语言</strong> and <strong>让</strong>.'
+          },
+          {
+            title: '2. Structural Reduction of Complex Characters (學習 → 学习, 國家 → 国家)',
+            body: '<strong>學習</strong> (xuéxí, to study) reduces the top component of 學 and condenses 習 to <strong>习</strong>. Similarly, <strong>國</strong> replaces the phonetic component 或 inside the enclosure 囗 with 玉 (jade) to form <strong>国</strong>.'
+          },
+          {
+            title: '3. Cross-Dialectal Phonological Stability',
+            body: 'Whether written in Simplified or Traditional characters, the underlying Sinitic morphemes map consistently across Mandarin, Cantonese, Hokkien, Teochew, Fuzhou, Wu, and Jin.'
+          }
+        ]
+      }
+    };
+
+    function loadComparatorPreset(key) {
+      const preset = COMPARATOR_PRESETS[key];
+      if (!preset) return;
+      document.getElementById('comp-lang-a-name').value = preset.langA;
+      document.getElementById('comp-lang-b-name').value = preset.langB;
+      document.getElementById('comp-text-a').value = preset.textA;
+      document.getElementById('comp-text-b').value = preset.textB;
+      runLanguageComparison(preset.explanations);
+    }
+
+    function levenshteinDistance(a, b) {
+      const m = a.length;
+      const n = b.length;
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (a[i - 1] === b[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1];
+          } else {
+            dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+          }
+        }
+      }
+      return dp[m][n];
+    }
+
+    function tokenizeForCompare(text) {
+      if (/[\u4e00-\u9fff]/.test(text) && !/\s/.test(text.trim())) {
+        return text.trim().split('');
+      }
+      return text.trim().split(/\s+/);
+    }
+
+    const COMPARATOR_GEMINI_SCHEMA = {
+      type: 'OBJECT',
+      properties: {
+        explanations: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              title: { type: 'STRING' },
+              body: { type: 'STRING' }
+            },
+            required: ['title', 'body']
+          }
+        }
+      },
+      required: ['explanations']
+    };
+
+    async function runLanguageComparison(customExplanations = null) {
+      const nameA = document.getElementById('comp-lang-a-name').value.trim() || 'Language A';
+      const nameB = document.getElementById('comp-lang-b-name').value.trim() || 'Language B';
+      const textA = document.getElementById('comp-text-a').value.trim();
+      const textB = document.getElementById('comp-text-b').value.trim();
+
+      if (!textA || !textB) {
+        showToast('Please enter passages in both Language A and Language B.', 'warning');
+        return;
+      }
+
+      document.getElementById('comp-display-label-a').textContent = nameA;
+      document.getElementById('comp-display-label-b').textContent = nameB;
+
+      const tokensA = tokenizeForCompare(textA);
+      const tokensB = tokenizeForCompare(textB);
+      const maxLen = Math.max(tokensA.length, tokensB.length);
+
+      const containerA = document.getElementById('comp-highlighted-a');
+      const containerB = document.getElementById('comp-highlighted-b');
+      containerA.innerHTML = '';
+      containerB.innerHTML = '';
+
+      let identicalCount = 0;
+      let cognateShiftCount = 0;
+      let distinctCount = 0;
+
+      for (let i = 0; i < maxLen; i++) {
+        const wA = tokensA[i] || '';
+        const wB = tokensB[i] || '';
+        const cleanA = wA.toLowerCase().replace(/[.,!?;:，。！？]/g, '');
+        const cleanB = wB.toLowerCase().replace(/[.,!?;:，。！？]/g, '');
+
+        let category = 'distinct';
+        if (cleanA === cleanB && cleanA !== '') {
+          category = 'identical';
+          identicalCount++;
+        } else if (cleanA && cleanB) {
+          const dist = levenshteinDistance(cleanA, cleanB);
+          const maxWordLen = Math.max(cleanA.length, cleanB.length);
+          if (maxWordLen > 1 && dist / maxWordLen <= 0.55) {
+            category = 'shift';
+            cognateShiftCount++;
+          } else {
+            distinctCount++;
+          }
+        } else {
+          distinctCount++;
+        }
+
+        const badgeStyles = {
+          identical: 'bg-white text-slate-800 border-slate-200',
+          shift: 'bg-amber-100/90 text-amber-950 border-amber-300 font-semibold',
+          distinct: 'bg-rose-100/90 text-rose-950 border-rose-300 font-semibold'
+        };
+
+        if (wA) {
+          const spanA = document.createElement('span');
+          spanA.className = `px-2 py-0.5 rounded-lg border ${badgeStyles[category]}`;
+          spanA.textContent = wA;
+          containerA.appendChild(spanA);
+        }
+        if (wB) {
+          const spanB = document.createElement('span');
+          spanB.className = `px-2 py-0.5 rounded-lg border ${badgeStyles[category]}`;
+          spanB.textContent = wB;
+          containerB.appendChild(spanB);
+        }
+      }
+
+      const expContainer = document.getElementById('comp-explanation-container');
+
+      let matchedExplanations = customExplanations;
+      if (!matchedExplanations) {
+        for (const key of Object.keys(COMPARATOR_PRESETS)) {
+          if (
+            COMPARATOR_PRESETS[key].textA === textA &&
+            COMPARATOR_PRESETS[key].textB === textB
+          ) {
+            matchedExplanations = COMPARATOR_PRESETS[key].explanations;
+            break;
+          }
+        }
+      }
+
+      if (!matchedExplanations && translationMode === 'live') {
+        const compBtn = document.getElementById('comparator-analyze-btn');
+        const compBtnLabel = document.getElementById('comparator-btn-label');
+        try {
+          if (compBtn) compBtn.disabled = true;
+          if (compBtnLabel) compBtnLabel.textContent = 'Analyzing with Gemini...';
+
+          const rawJson = await callGeminiGenerateContent({
+            prompt: `Compare these two parallel passages in ${nameA} and ${nameB}:
+${nameA}: """${textA}"""
+${nameB}: """${textB}"""
+Provide 3 clear sections (title and body) explaining phonological/orthographic shifts, morphological/grammatical differences, and lexical/cognate divergences.`,
+            systemInstruction: 'You are a comparative linguist providing clear, accurate grammatical and phonological comparisons.',
+            responseSchema: COMPARATOR_GEMINI_SCHEMA
+          });
+          const parsedComp = JSON.parse(rawJson);
+          if (Array.isArray(parsedComp.explanations) && parsedComp.explanations.length > 0) {
+            matchedExplanations = parsedComp.explanations;
+          }
+        } catch (err) {
+          showToast(`Gemini comparator note: ${err.message}. Showing structural summary.`, 'warning');
+        } finally {
+          if (compBtn) compBtn.disabled = false;
+          if (compBtnLabel) compBtnLabel.textContent = 'Compare Texts & Analyze Differences';
+        }
+      }
+
+      if (matchedExplanations) {
+        expContainer.innerHTML = matchedExplanations
+          .map(
+            (item) => `
+            <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/70 space-y-1.5">
+              <h4 class="font-bold text-slate-900 text-sm sm:text-base">${item.title}</h4>
+              <p class="text-slate-700 leading-relaxed">${item.body}</p>
+            </div>
+          `
+          )
+          .join('');
+      } else {
+        const total = Math.max(1, identicalCount + cognateShiftCount + distinctCount);
+        const similarityPct = Math.round(((identicalCount + cognateShiftCount * 0.65) / total) * 100);
+        expContainer.innerHTML = `
+          <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/70 space-y-1.5">
+            <h4 class="font-bold text-slate-900">1. Quantitative Lexical &amp; Orthographic Overlap (~${similarityPct}% Structural Similarity)</h4>
+            <p>Across the aligned tokens between <strong>${nameA}</strong> and <strong>${nameB}</strong>, <strong>${identicalCount}</strong> tokens are orthographically identical, <strong>${cognateShiftCount}</strong> display systematic phonological or spelling shifts (highlighted in amber), and <strong>${distinctCount}</strong> represent distinct vocabulary or grammatical particles (highlighted in rose).</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/70 space-y-1.5">
+            <h4 class="font-bold text-slate-900">2. Sound Shifts &amp; Morphological Inflection</h4>
+            <p>Words highlighted in <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-semibold text-xs">amber</span> share a common etymological root (cognates) but differ in vowel length, diacritics, palatalization, or inflectional case/tense suffixes.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/70 space-y-1.5">
+            <h4 class="font-bold text-slate-900">3. Lexical Divergence &amp; False Friends</h4>
+            <p>Tokens highlighted in <span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-900 font-semibold text-xs">rose</span> indicate places where the two languages select different everyday roots, prepositions, or syntactic word-order particles.</p>
+          </div>
+        `;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. CHINESE DIALECT DICTIONARIES HUB RENDERER
+    // -------------------------------------------------------------------------
+    function renderDictionaryHub() {
+      const grid = document.getElementById('dictionary-hub-grid');
+      if (!grid) return;
+      const query = (document.getElementById('dict-quick-query')?.value || '丝绸').trim();
+
+      grid.innerHTML = DIALECT_DICTIONARIES.map(
+        (dict) => `
+        <div class="p-5 rounded-2xl border border-slate-200/90 bg-slate-50/60 hover:bg-white hover:shadow-md transition flex flex-col justify-between gap-4">
+          <div class="space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <h3 class="text-sm sm:text-base font-bold text-slate-900">${dict.name}</h3>
+            </div>
+            <span class="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${dict.badge}">
+              ${dict.variety}
+            </span>
+            <p class="text-xs text-slate-600 leading-relaxed pt-1">${dict.desc}</p>
+          </div>
+
+          <div class="flex items-center gap-2 pt-2 border-t border-slate-200/60">
+            <a href="${dict.searchUrl(query)}" target="_blank" rel="noopener noreferrer"
+              class="flex-1 text-center px-3 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition">
+              Search "${query}" ↗
+            </a>
+            <a href="${dict.url}" target="_blank" rel="noopener noreferrer"
+              class="px-3 py-2 rounded-xl text-xs font-semibold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 transition">
+              Home
+            </a>
+          </div>
+        </div>
+      `
+      ).join('');
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. BOOTSTRAP ON WINDOW LOAD
+    // -------------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      initSimpTradConverter();
+      loadRpdQuota();
+      loadApiConfig();
+      loadFlashcardsFromStorage();
+      loadAnalyzerPreset('zh_culture');
+      loadComparatorPreset('cs_sk');
+      renderDictionaryHub();
+    });
+  </script>
+</body>
+</html>
